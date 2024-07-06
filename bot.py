@@ -19,11 +19,14 @@ bot = commands.Bot(command_prefix=prefix, intents=intents)
 
 #region Commands
 
+#region Utilities
 @bot.command(name='stop', description='Stops the bot')
 async def stopCommand(message):
     await message.reply("Stopping")
     
     quit()
+
+#endregion
 
 #endregion
 
