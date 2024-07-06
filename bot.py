@@ -17,4 +17,14 @@ prefix = '-'
 bot = commands.Bot(command_prefix=prefix, intents=intents)
 #endregion
 
+#region Commands
+
+@bot.command(name='stop', description='Stops the bot')
+async def stopCommand(message):
+    await message.reply("Stopping")
+    
+    quit()
+
+#endregion
+
 bot.run(TOKEN)
