@@ -127,7 +127,31 @@ async def createAccount(message, password, name, type):
     
     await message.reply(f'Pending...')
     print(str(pendingQueries))
+
+@bot.command(name='deleteAccount', description='deletes an account')
+async def deleteAccount(message, password, name, reason):
     
+    delete_account= f"""
+    DELETE 
+    FROM accounts
+    WHERE password = '{password}' AND name = '{name}'
+    """
+    
+    channel = await bot.fetch_channel(logID)
+    logMessage = await channel.send(f'{message.author.name} would like to delete account \'{name}\' with password {password}. Their reason is \"{reason}\"')
+    await logMessage.add_reaction('✅')
+    await logMessage.add_reaction('❌')
+    
+    pendingQueries.append({
+        "query":delete_account,
+        "id": logMessage.id,
+        "msg": message,
+        "successMessage": f'Account Deleted',
+        "denyMessage": 'Account deletion denied. Message bank staff for more details. Sorry for the inconvenience!'
+    })
+    
+    await message.reply(f'Pending...')
+    print(str(pendingQueries))
 #endregion
 
 #endregion
