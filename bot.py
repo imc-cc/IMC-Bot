@@ -50,7 +50,6 @@ def execute_query(connection, query):
 
 create_accounts_table = """
 CREATE TABLE IF NOT EXISTS accounts (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   password TEXT NOT NULL,
   type TEXT NOT NULL,
@@ -110,7 +109,7 @@ async def stopCommand(message):
 async def createAccount(message, password, name, type):
 
     if type not in accountTypes:
-        await message.reply("Account must be one of the following types: " + str(accountTypes))
+        await message.reply("Account must be one of the following types: " + str(accountTypes).replace("[","").replace("]","").replace(",",""))
         return
     
     if type == "Checking":
@@ -130,7 +129,6 @@ async def createAccount(message, password, name, type):
         maxWithdraw = 3072
         maxDeposit = 3072
     
-    
     create_account= f"""
         INSERT INTO 
             accounts (name, password, type, level, money, interestRate, maxWithdraw, maxDeposit, active, creditScore)
@@ -146,7 +144,7 @@ async def createAccount(message, password, name, type):
         "query":create_account,
         "id": logMessage.id,
         "msg": message,
-        "successMessage": f'Account Created!',
+        "successMessage": 'Account Created!',
         "denyMessage": 'Account creation denied. Message bank staff for more details. Sorry for the inconvenience!'
     })
     
@@ -195,8 +193,7 @@ async def on_reaction_add(reaction, user):
             elif reaction.emoji == '❌':
                 await i["msg"].reply(i["denyMessage"])
                 pendingQueries.remove(i)
-            
-
+           
 #endregion
 
 bot.run(TOKEN)
