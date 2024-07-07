@@ -59,7 +59,9 @@ CREATE TABLE IF NOT EXISTS accounts (
   maxWithdraw INTEGER NOT NULL,
   maxDeposit INTEGER NOT NULL,
   active INTEGER NOT NULL,
-  creditScore INTEGER NOT NULL
+  creditScore INTEGER NOT NULL,
+  amountWithdrew INTEGER NOT NULL,
+  amountDeposited INTEGER NOT NULL
 );
 """
 execute_query(connection, create_accounts_table)
@@ -106,7 +108,7 @@ async def stopCommand(message):
 #region Accounts
 
 @bot.command(name='createAccount', description='creates an account')
-async def createAccount(message, password, name, type):
+async def createAccount(message, name, password, type):
 
     if type not in accountTypes:
         await message.reply("Account must be one of the following types: " + str(accountTypes).replace("[","").replace("]","").replace(",",""))
@@ -131,9 +133,9 @@ async def createAccount(message, password, name, type):
     
     create_account= f"""
         INSERT INTO 
-            accounts (name, password, type, level, money, interestRate, maxWithdraw, maxDeposit, active, creditScore)
+            accounts (name, password, type, level, money, interestRate, maxWithdraw, maxDeposit, active, creditScore, amountWithdrew, amountDeposited)
         VALUES
-            ('{name}', '{password}', '{type}', 3, 0, {interestRate}, {maxWithdraw}, {maxDeposit}, 1, 3);"""
+            ('{name}', '{password}', '{type}', 3, 0, {interestRate}, {maxWithdraw}, {maxDeposit}, 1, 3, 0, 0);"""
     
     channel = await bot.fetch_channel(logID)
     logMessage = await channel.send(f'{message.author.name} would like to open a {type} account with name {name} and password {password}')
@@ -151,7 +153,7 @@ async def createAccount(message, password, name, type):
     await message.reply(f'Pending...')
 
 @bot.command(name='deleteAccount', description='deletes an account')
-async def deleteAccount(message, password, name, reason):
+async def deleteAccount(message, name, password, reason):
     
     delete_account= f"""
     DELETE 
@@ -173,6 +175,138 @@ async def deleteAccount(message, password, name, reason):
     })
     
     await message.reply(f'Pending...')
+
+@bot.command(name='bal', description='Finds the balance of an account')
+async def accountBalance(message,name,password):
+    
+    balanceQuery = f"""
+    SELECT money
+    FROM accounts
+    WHERE password = '{password}' AND name = '{name}'
+    
+    """
+    
+    balance = execute_read_query(connection, balanceQuery)
+    await message.reply("Your balance is: " + str(balance).replace("[(","").replace(",)]","") + " IMC Denars")
+#endregion
+
+#region Holdings
+
+@bot.command(name='deposit', description="Deposit money into your account")
+async def depositCommand(message, name, password, amount):
+    try:
+        amount = int(amount)
+    except:
+        await message.reply("Amount must be an integer")
+        return
+        
+    checkLogin = f"""
+    SELECT *
+    FROM accounts 
+    WHERE name = '{name}' AND password = '{password}'
+    """
+    check = execute_read_query(connection, checkLogin)
+    print(str(check))
+    if check == []:
+        await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
+        return
+    
+    maxDeposit = execute_read_query(connection, f"SELECT maxDeposit FROM accounts WHERE name = '{name}' AND password = '{password}'")
+    maxDeposit = int(str(maxDeposit).replace("[(","").replace(",)]",""))
+    
+    money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = '{name}' AND password = '{password}'")
+    money = float(str(money).replace("[(","").replace(",)]",""))
+    
+    amountDeposited = execute_read_query(connection, f"SELECT amountDeposited FROM accounts WHERE name = '{name}' AND password = '{password}'")
+    amountDeposited = int(str(amountDeposited).replace("[(","").replace(",)]",""))
+    
+    deposit_query = f"""
+    UPDATE accounts
+    SET money = {str(money+amount)},
+        amountDeposited = {str(amount+amountDeposited)}
+    WHERE name = '{name}' AND password = '{password}'
+    
+    """
+    channel = await bot.fetch_channel(logID)
+    
+    if amount+amountDeposited <= maxDeposit:
+        execute_query(connection, deposit_query)
+        await channel.send(f'{message.author.name} deposited {amount} IMC Denars into account \'{name}\' with password \'{password}.\'')
+        await message.reply("Deposit Completed")
+    else:
+        logMessage = await channel.send(f'{message.author.name} would like to deposit {amount} IMC Denars into account \'{name}\' with password \'{password}\'.')
+        await logMessage.add_reaction('✅')
+        await logMessage.add_reaction('❌')
+        
+        pendingQueries.append({
+            "query":deposit_query,
+            "id": logMessage.id,
+            "msg": message,
+            "successMessage": f'Deposit Completed',
+            "denyMessage": 'Deposit denied. Message bank staff for more details. Sorry for the inconvenience!'
+        })
+        
+        await message.reply("Pending...")
+
+@bot.command(name='withdraw', description="Withdraw money from your account")
+async def withdrawCommand(message, name, password, amount):
+    try:
+        amount = int(amount)
+    except:
+        await message.reply("Amount must be an integer")
+        return
+        
+    checkLogin = f"""
+    SELECT *
+    FROM accounts 
+    WHERE name = '{name}' AND password = '{password}'
+    """
+    check = execute_read_query(connection, checkLogin)
+    print(str(check))
+    if check == []:
+        await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
+        return
+    
+    maxWithdraw = execute_read_query(connection, f"SELECT maxWithdraw FROM accounts WHERE name = '{name}' AND password = '{password}'")
+    maxWithdraw = int(str(maxWithdraw).replace("[(","").replace(",)]",""))
+    
+    money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = '{name}' AND password = '{password}'")
+    money = float(str(money).replace("[(","").replace(",)]",""))
+    
+    amountWithdrew = execute_read_query(connection, f"SELECT amountWithdrew FROM accounts WHERE name = '{name}' AND password = '{password}'")
+    amountWithdrew = int(str(amountWithdrew).replace("[(","").replace(",)]",""))
+    
+    if money < amount:
+        await message.reply("You lack the funds to withdraw that amount. You may want to look into taking a loan.")
+        return
+    
+    withdraw_query = f"""
+    UPDATE accounts
+    SET money = {str(money-amount)},
+        amountWithdrew = {str(amount+amountWithdrew)}
+    WHERE name = '{name}' AND password = '{password}'
+    """
+    channel = await bot.fetch_channel(logID)
+    
+    if amount+amountWithdrew <= maxWithdraw:
+        execute_query(connection, withdraw_query)
+        await channel.send(f'{message.author.name} withdrew {amount} IMC Denars from account \'{name}\' with password \'{password}.\'')
+        await message.reply("Withdraw Completed")
+    else:
+        logMessage = await channel.send(f'{message.author.name} would like to withdraw {amount} IMC Denarsfrom account \'{name}\' with password \'{password}\'.')
+        await logMessage.add_reaction('✅')
+        await logMessage.add_reaction('❌')
+        
+        pendingQueries.append({
+            "query":withdraw_query,
+            "id": logMessage.id,
+            "msg": message,
+            "successMessage": f'Withdraw Completed',
+            "denyMessage": 'Withdraw denied. Message bank staff for more details. The most likely reason is that you withdrew past your max withdraw amount. Sometimes we will allow this, but that is the exception not the rule. Sorry for the inconvenience!'
+        })
+        
+        await message.reply("Pending...")
+
 #endregion
 
 #endregion
