@@ -82,6 +82,9 @@ logID = os.getenv("LOG_CHANNEL_ID")
 #Create pending queries list
 pendingQueries = [] 
        
+#Account types
+accountTypes = ["Checking", "Savings", "Government", "Business"]
+       
 #endregion
 
 #region Util Functions
@@ -106,11 +109,33 @@ async def stopCommand(message):
 @bot.command(name='createAccount', description='creates an account')
 async def createAccount(message, password, name, type):
 
+    if type not in accountTypes:
+        await message.reply("Account must be one of the following types: " + str(accountTypes))
+        return
+    
+    if type == "Checking":
+        interestRate = 0.02
+        maxWithdraw = 1024
+        maxDeposit = 1024
+    elif type == "Savings":
+        interestRate = 0.04
+        maxWithdraw = 512
+        maxDeposit = 512
+    elif type == "Business":
+        interestRate = 0.02
+        maxWithdraw = 2048
+        maxDeposit = 2048
+    elif type == "Government":
+        interestRate = 0.02
+        maxWithdraw = 3072
+        maxDeposit = 3072
+    
+    
     create_account= f"""
         INSERT INTO 
             accounts (name, password, type, level, money, interestRate, maxWithdraw, maxDeposit, active, creditScore)
         VALUES
-            ('{name}', '{password}', '{type}', 3, 0, 0.04, 1024, 1024, 1, 3);"""
+            ('{name}', '{password}', '{type}', 3, 0, {interestRate}, {maxWithdraw}, {maxDeposit}, 1, 3);"""
     
     channel = await bot.fetch_channel(logID)
     logMessage = await channel.send(f'{message.author.name} would like to open a {type} account with name {name} and password {password}')
@@ -126,7 +151,6 @@ async def createAccount(message, password, name, type):
     })
     
     await message.reply(f'Pending...')
-    print(str(pendingQueries))
 
 @bot.command(name='deleteAccount', description='deletes an account')
 async def deleteAccount(message, password, name, reason):
@@ -151,7 +175,6 @@ async def deleteAccount(message, password, name, reason):
     })
     
     await message.reply(f'Pending...')
-    print(str(pendingQueries))
 #endregion
 
 #endregion
