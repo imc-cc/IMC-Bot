@@ -307,6 +307,28 @@ async def withdrawCommand(message, name, password, amount):
         
         await message.reply("Pending...")
 
+@bot.command(name='resetDailyMax', description='Resets the withdrew and deposited amount')
+async def resetDailyMaxCommand(message):
+    reset_query = """
+    UPDATE accounts
+    SET amountDeposited = 0,
+        amountWithdrew = 0"""
+        
+    channel = await bot.fetch_channel(logID)
+    logMessage = await channel.send(f'{message.author.name} would like to reset withdrew and deposited amounts')
+    await logMessage.add_reaction('✅')
+    await logMessage.add_reaction('❌')
+        
+    pendingQueries.append({
+        "query":reset_query,
+        "id": logMessage.id,
+        "msg": message,
+        "successMessage": f'Amounts Reset',
+        "denyMessage": 'Someone declined the request.'
+    })
+    
+    await message.reply("Pending...")
+
 #endregion
 
 #endregion
