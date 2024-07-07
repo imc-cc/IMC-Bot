@@ -76,12 +76,23 @@ def execute_read_query(connection, query):
         return result
     except Error as e:
         print(f"The error '{e}' occurred")
-        
+     
+logID = os.getenv("LOG_CHANNEL_ID")
+
+#Create pending queries list
+pendingQueries = [] 
+       
 #endregion
+
+#region Util Functions
+
+
+#endregion 
 
 #region Commands
 
 #region Utilities
+
 @bot.command(name='closeDoor', description='Stops the bot')
 async def stopCommand(message):
     await message.reply("Stopping")
@@ -94,19 +105,50 @@ async def stopCommand(message):
 
 @bot.command(name='createAccount', description='creates an account')
 async def createAccount(message, password, name, type):
+
     create_account= f"""
         INSERT INTO 
             accounts (name, password, type, level, money, interestRate, maxWithdraw, maxDeposit, active, creditScore)
         VALUES
-            ('{name}', '{password}', '{type}', 3, 0, 0.04, 1024, 1024, 1, 3);
-    """
+            ('{name}', '{password}', '{type}', 3, 0, 0.04, 1024, 1024, 1, 3);"""
     
-    execute_query(connection, create_account)
+    channel = await bot.fetch_channel(logID)
+    logMessage = await channel.send(f'{message.author.name} would like to open a {type} account with name {name} and password {password}')
+    await logMessage.add_reaction('✅')
+    await logMessage.add_reaction('❌')
     
-    await message.reply(f'{type} Account Created with name {name}, password {password}')
+    pendingQueries.append({
+        "query":create_account,
+        "id": logMessage.id,
+        "msg": message,
+        "successMessage": f'Account Created!',
+        "denyMessage": 'Account creation denied. Message bank staff for more details. Sorry for the inconvenience!'
+    })
     
+    await message.reply(f'Pending...')
+    print(str(pendingQueries))
+    
+#endregion
 
 #endregion
+
+#region Events
+
+@bot.event
+async def on_reaction_add(reaction, user):
+    if(user == bot.user):
+        return
+    
+    for i in pendingQueries:
+        if i["id"] == reaction.message.id:
+            if reaction.emoji == '✅':
+                execute_query(connection, i["query"])
+                await i["msg"].reply(i["successMessage"])
+                pendingQueries.remove(i)
+            elif reaction.emoji == '❌':
+                await i["msg"].reply(i["denyMessage"])
+                pendingQueries.remove(i)
+            
 
 #endregion
 
