@@ -87,6 +87,9 @@ pendingQueries = []
        
 #Account types
 accountTypes = ["Checking", "Savings", "Government", "Business"]
+
+#List of Administrators
+ADMINS = os.getenv("ADMINS")
        
 #endregion
 
@@ -110,6 +113,10 @@ def execute_query_many(connection, queries):
 
 @bot.command(name='closeDoor', description='Stops the bot')
 async def stopCommand(message):
+    if str(message.author.id) not in ADMINS:
+        await message.reply("You lack the permissions to run that command")
+        return
+    
     await message.reply("Stopping")
     
     quit()
@@ -231,7 +238,7 @@ async def accountBalance(message,name,password):
 
 #endregion
 
-#region Holdings
+#region Data
 
 @bot.command(name='deposit', description="Deposit money into your account")
 async def depositCommand(message, name, password, amount, atmID):
@@ -427,6 +434,10 @@ async def transferCommand(message, name, password, recipientName, amount):
 
 @bot.command(name='resetDailyMax', description='Resets the withdrew and deposited amount')
 async def resetDailyMaxCommand(message):
+    if str(message.author.id) not in ADMINS:
+        await message.reply("You lack the permissions to run that command")
+        return
+    
     reset_query = """
     UPDATE accounts
     SET amountDeposited = 0,
@@ -445,6 +456,41 @@ async def resetDailyMaxCommand(message):
         "msg": message,
         "successMessage": f'Amounts Reset',
         "denyMessage": 'Someone declined the request.'
+    })
+    
+    await message.reply("Pending...")
+
+@bot.command(name='accountEdit', description='edits account data')
+async def accountEdit(message, name, dataToChange, newData):
+    if str(message.author.id) not in ADMINS:
+        await message.reply("You lack the permissions to run that command")
+        return
+    
+    checkLogin = f"""
+    SELECT *
+    FROM accounts 
+    WHERE name = '{name}'
+    """
+    check = execute_read_query(connection, checkLogin)
+    print(str(check))
+    if check == []: 
+        await message.reply("Account not found")
+        return
+    
+    update_query = f"""    UPDATE accounts SET {dataToChange} = {newData} WHERE name = '{name}'    """
+    
+    channel = await bot.fetch_channel(logID)
+    logMessage = await channel.send(f'{message.author.name} would like to edit the data of account {name}. They wish to change data of {dataToChange} to {newData}')
+    await logMessage.add_reaction('✅')
+    await logMessage.add_reaction('❌')
+        
+    pendingQueries.append({
+        "type": "single",
+        "query":update_query,
+        "id": logMessage.id,
+        "msg": message,
+        "successMessage": f'Update Completed',
+        "denyMessage": 'Update Denied.'
     })
     
     await message.reply("Pending...")
