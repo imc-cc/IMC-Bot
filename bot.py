@@ -234,7 +234,7 @@ async def accountBalance(message,name,password):
 #region Holdings
 
 @bot.command(name='deposit', description="Deposit money into your account")
-async def depositCommand(message, name, password, amount):
+async def depositCommand(message, name, password, amount, atmID):
     try:
         amount = int(amount)
     except:
@@ -272,10 +272,10 @@ async def depositCommand(message, name, password, amount):
     
     if amount+amountDeposited <= maxDeposit:
         execute_query(connection, deposit_query)
-        await channel.send(f'{message.author.name} deposited {amount} IMC Denars into account \'{name}\' with password \'{password}.\'')
+        await channel.send(f'{message.author.name} deposited {amount} IMC Denars into account \'{name}\' with password \'{password}\' into ATM with ID {atmID}.')
         await message.reply("Deposit Completed")
     else:
-        logMessage = await channel.send(f'{message.author.name} would like to deposit {amount} IMC Denars into account \'{name}\' with password \'{password}\'.')
+        logMessage = await channel.send(f'{message.author.name} would like to deposit {amount} IMC Denars into account \'{name}\' with password \'{password}\' into ATM with ID {atmID}.')
         await logMessage.add_reaction('✅')
         await logMessage.add_reaction('❌')
         
@@ -291,7 +291,7 @@ async def depositCommand(message, name, password, amount):
         await message.reply("Pending...")
 
 @bot.command(name='withdraw', description="Withdraw money from your account")
-async def withdrawCommand(message, name, password, amount):
+async def withdrawCommand(message, name, password, amount, atmID):
     try:
         amount = int(amount)
     except:
@@ -332,10 +332,10 @@ async def withdrawCommand(message, name, password, amount):
     
     if amount+amountWithdrew <= maxWithdraw:
         execute_query(connection, withdraw_query)
-        await channel.send(f'{message.author.name} withdrew {amount} IMC Denars from account \'{name}\' with password \'{password}.\'')
+        await channel.send(f'{message.author.name} withdrew {amount} IMC Denars from account \'{name}\' with password \'{password}\' from ATM with ID {atmID}.')
         await message.reply("Withdraw Completed")
     else:
-        logMessage = await channel.send(f'{message.author.name} would like to withdraw {amount} IMC Denars from account \'{name}\' with password \'{password}\'.')
+        logMessage = await channel.send(f'{message.author.name} would like to withdraw {amount} IMC Denars from account \'{name}\' with password \'{password}\' from ATM with ID {atmID}.')
         await logMessage.add_reaction('✅')
         await logMessage.add_reaction('❌')
         
@@ -472,6 +472,8 @@ async def on_reaction_add(reaction, user):
             elif reaction.emoji == '❌':
                 await i["msg"].reply(i["denyMessage"])
                 pendingQueries.remove(i)
+            
+            return
            
 #endregion
 
