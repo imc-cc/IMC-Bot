@@ -126,7 +126,7 @@ async def stopCommand(message):
 #region Accounts
 
 @bot.command(name='createAccount', description='creates an account')
-async def createAccount(message, name, password, type):
+async def createAccount(message, name: str = commands.parameter(description="Name for account"), password: str = commands.parameter(description="Password for account"), type: str = commands.parameter(description="Type of account to create")):
 
     checkLogin = f"""
     SELECT *
@@ -187,7 +187,7 @@ async def createAccount(message, name, password, type):
     await message.reply(f'Pending...')
 
 @bot.command(name='deleteAccount', description='deletes an account')
-async def deleteAccount(message, name, password, reason):
+async def deleteAccount(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account"), reason: str = commands.parameter(description="Why you want to delete it")):
     
     checkLogin = f"""
     SELECT *
@@ -224,7 +224,7 @@ async def deleteAccount(message, name, password, reason):
     await message.reply(f'Pending...')
 
 @bot.command(name='bal', description='Finds the balance of an account')
-async def accountBalance(message,name,password):
+async def accountBalance(message,name: str = commands.parameter(description="Name of account"),password: str = commands.parameter(description="Password of account")):
     
     balanceQuery = f"""
     SELECT money
@@ -241,7 +241,7 @@ async def accountBalance(message,name,password):
 #region Data
 
 @bot.command(name='deposit', description="Deposit money into your account")
-async def depositCommand(message, name, password, amount, atmID):
+async def depositCommand(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account"), amount: str = commands.parameter(description="Amount to deposit"), atmID: str = commands.parameter(description="ID of where you are depositing it")):
     try:
         amount = int(amount)
     except:
@@ -298,7 +298,7 @@ async def depositCommand(message, name, password, amount, atmID):
         await message.reply("Pending...")
 
 @bot.command(name='withdraw', description="Withdraw money from your account")
-async def withdrawCommand(message, name, password, amount, atmID):
+async def withdrawCommand(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account"), amount: str = commands.parameter(description="Amount to withdraw"), atmID: str = commands.parameter(description="ID of where you are depositing it")):
     try:
         amount = int(amount)
     except:
@@ -358,7 +358,7 @@ async def withdrawCommand(message, name, password, amount, atmID):
         await message.reply("Pending...")
 
 @bot.command(name='transfer', description='Transfer money between accounts')
-async def transferCommand(message, name, password, recipientName, amount):
+async def transferCommand(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account"), recipientName: str = commands.parameter(description="Name of recipient account"), amount: str = commands.parameter(description="Amount to transfer")):
     try:
         amount = int(amount)
     except:
@@ -461,7 +461,7 @@ async def resetDailyMaxCommand(message):
     await message.reply("Pending...")
 
 @bot.command(name='accountEdit', description='edits account data')
-async def accountEdit(message, name, dataToChange, newData):
+async def accountEdit(message, name: str = commands.parameter(description="Name of account"), dataToChange: str = commands.parameter(description="Name of data you want to change"), newData: str = commands.parameter(description="Data to change it to")):
     if str(message.author.id) not in ADMINS:
         await message.reply("You lack the permissions to run that command")
         return
