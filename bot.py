@@ -125,6 +125,7 @@ async def stopCommand(message):
 
 #region Accounts
 
+#region Create Account Command
 @bot.command(name='createAccount', description='creates an account')
 async def createAccount(message, name: str = commands.parameter(description="Name for account"), password: str = commands.parameter(description="Password for account"), type: str = commands.parameter(description="Type of account to create")):
 
@@ -186,6 +187,13 @@ async def createAccount(message, name: str = commands.parameter(description="Nam
     
     await message.reply(f'Pending...')
 
+@createAccount.error
+async def createAccount_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
+#region Delete Account Command
 @bot.command(name='deleteAccount', description='deletes an account')
 async def deleteAccount(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account"), reason: str = commands.parameter(description="Why you want to delete it")):
     
@@ -223,8 +231,26 @@ async def deleteAccount(message, name: str = commands.parameter(description="Nam
     
     await message.reply(f'Pending...')
 
+@deleteAccount.error
+async def deleteAccount_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
+#region Balance Command
 @bot.command(name='bal', description='Finds the balance of an account')
 async def accountBalance(message,name: str = commands.parameter(description="Name of account"),password: str = commands.parameter(description="Password of account")):
+    
+    checkLogin = f"""
+    SELECT *
+    FROM accounts 
+    WHERE name = '{name}' AND password = '{password}'
+    """
+    check = execute_read_query(connection, checkLogin)
+    print(str(check))
+    if check == []:
+        await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
+        return
     
     balanceQuery = f"""
     SELECT money
@@ -236,10 +262,17 @@ async def accountBalance(message,name: str = commands.parameter(description="Nam
     balance = execute_read_query(connection, balanceQuery)
     await message.reply("Your balance is: " + str(balance).replace("[(","").replace(",)]","") + " IMC Denars")
 
+@accountBalance.error
+async def bal_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
 #endregion
 
 #region Data
 
+#region Deposit Command
 @bot.command(name='deposit', description="Deposit money into your account")
 async def depositCommand(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account"), amount: str = commands.parameter(description="Amount to deposit"), atmID: str = commands.parameter(description="ID of where you are depositing it")):
     try:
@@ -297,6 +330,13 @@ async def depositCommand(message, name: str = commands.parameter(description="Na
         
         await message.reply("Pending...")
 
+@depositCommand.error
+async def deposit_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
+#region Withdraw Command
 @bot.command(name='withdraw', description="Withdraw money from your account")
 async def withdrawCommand(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account"), amount: str = commands.parameter(description="Amount to withdraw"), atmID: str = commands.parameter(description="ID of where you are depositing it")):
     try:
@@ -357,6 +397,13 @@ async def withdrawCommand(message, name: str = commands.parameter(description="N
         
         await message.reply("Pending...")
 
+@withdrawCommand.error
+async def withdraw_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
+#region Transfer Command
 @bot.command(name='transfer', description='Transfer money between accounts')
 async def transferCommand(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account"), recipientName: str = commands.parameter(description="Name of recipient account"), amount: str = commands.parameter(description="Amount to transfer")):
     try:
@@ -432,6 +479,12 @@ async def transferCommand(message, name: str = commands.parameter(description="N
         
         await message.reply("Pending...")
 
+@transferCommand.error
+async def transfer_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
 @bot.command(name='resetDailyMax', description='Resets the withdrew and deposited amount')
 async def resetDailyMaxCommand(message):
     if str(message.author.id) not in ADMINS:
@@ -460,6 +513,7 @@ async def resetDailyMaxCommand(message):
     
     await message.reply("Pending...")
 
+#region Account Edit Command
 @bot.command(name='accountEdit', description='edits account data')
 async def accountEdit(message, name: str = commands.parameter(description="Name of account"), dataToChange: str = commands.parameter(description="Name of data you want to change"), newData: str = commands.parameter(description="Data to change it to")):
     if str(message.author.id) not in ADMINS:
@@ -494,6 +548,12 @@ async def accountEdit(message, name: str = commands.parameter(description="Name 
     })
     
     await message.reply("Pending...")
+
+@accountEdit.error
+async def accountEdit_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
 
 #endregion
 
