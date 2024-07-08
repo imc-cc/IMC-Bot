@@ -2,6 +2,7 @@
 import discord
 import os
 import time
+import random
 import sqlite3
 from sqlite3 import Error
 from discord.ext import commands
@@ -67,6 +68,20 @@ CREATE TABLE IF NOT EXISTS accounts (
 );
 """
 execute_query(connection, create_accounts_table)
+
+create_loans_table = """
+CREATE TABLE IF NOT EXISTS loans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    accountName TEXT NOT NULL,
+    interestRate REAL NOT NULL,
+    originalAmount INTEGER NOT NULL,
+    amountRemaining REAL NOT NULL,
+    discordID INTEGER NOT NULL,
+    payPercent REAL NOT NULL,
+    lateFee INTEGER NOT NULL
+);
+"""
+execute_query(connection, create_loans_table)
 
 #endregion
 
@@ -351,7 +366,6 @@ async def withdrawCommand(message, name: str = commands.parameter(description="N
     WHERE name = '{name}' AND password = '{password}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
     if check == []:
         await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
         return
@@ -551,6 +565,77 @@ async def accountEdit(message, name: str = commands.parameter(description="Name 
 
 @accountEdit.error
 async def accountEdit_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
+#endregion
+
+#region Gambling
+
+#region Account Edit Command
+@bot.command(name='dice', description='gamble on a dice roll')
+async def diceRoll(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account"), guess: str = commands.parameter(description="Which number you would like to bet on"), betAmount: str = commands.parameter(description="How much you would like to bet")):
+    
+    try:
+        guess = int(guess)
+    except:
+        await message.reply("Guess must be an integer")
+        return
+        
+    try:
+        betAmount = int(betAmount)
+    except:
+        await message.reply("Bet amount must be an integer")
+        return
+    
+    if guess not in range(1,7):
+        await message.reply("Guess must be a number in the range [1,6]")
+        return
+    
+    checkLogin = f"""
+    SELECT *
+    FROM accounts 
+    WHERE name = '{name}'"""
+    
+    check = execute_read_query(connection, checkLogin)
+    if check == []: 
+        await message.reply("Account not found")
+        return
+    
+    money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = '{name}' AND password = '{password}'")
+    money = float(str(money).replace("[(","").replace(",)]",""))
+    
+    print(str(money))
+    
+    if money < betAmount:
+        await message.reply("You lack the funds for that transaction.")
+        return
+    
+    roll = random.randint(1,6)
+    print(str(roll))
+    
+    channel = await bot.fetch_channel(logID)
+    
+    if roll == guess:
+        money += betAmount*2
+        await message.reply(f"The dice rolled {str(roll)}. You win! Your money got tripled! You now have {str(money)} IMC Denars")
+        await channel.send(f"{message.author.name} won {str(betAmount)} on a dice roll! They now have {str(money)} IMC Denars")
+    else:
+        money -= betAmount
+        await message.reply(f"The dice rolled {str(roll)}. You lost {str(betAmount)} IMC Denars...")
+        await channel.send(f"{message.author.name} lost {str(betAmount)} on a dice roll! They now have {str(money)} IMC Denars")
+        
+    gamble_query = f"""
+    UPDATE accounts
+    SET money = {str(money)}
+    WHERE name = '{name}' AND password = '{password}'
+    """
+    
+    execute_query(connection, gamble_query)
+
+@diceRoll.error
+async def diceRoll_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("All arguments not provided, try running the help command")
 #endregion
