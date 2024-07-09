@@ -1135,9 +1135,9 @@ async def payLoan(message,
     IMCmoney = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = 'IMC'")
     IMCmoney = float(str(IMCmoney).replace("[(","").replace(",)]",""))
     
-    pay_Query=f"UPDATE accounts SET money = {str(money-amount)} WHERE name = '{name}' AND password = '{password}';"
-    recieve_Query=f"UPDATE accounts SET money = {str(IMCmoney+amount)} WHERE name = 'IMC';"
-    loan_Query=f"UPDATE loans SET amountRemaining = {str(amountRemaining-amount)}, paid = 1 WHERE id = {id} AND accountName = '{name}';"
+    pay_Query=f"UPDATE accounts SET money = {str(round(money-amount,2))} WHERE name = '{name}' AND password = '{password}';"
+    recieve_Query=f"UPDATE accounts SET money = {str(round(IMCmoney+amount,2))} WHERE name = 'IMC';"
+    loan_Query=f"UPDATE loans SET amountRemaining = {str(round(amountRemaining-amount,2))}, paid = 1 WHERE id = {id} AND accountName = '{name}';"
     
     queries = [pay_Query,recieve_Query,loan_Query]
     execute_query_many(connection,queries)
