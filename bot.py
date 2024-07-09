@@ -978,6 +978,10 @@ async def payLoan(message,
     money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = '{name}' AND password = '{password}'")
     money = float(str(money).replace("[(","").replace(",)]",""))
     
+    if money-amount < 0:
+        await message.reply("You lack the funds for that transaction")
+        return
+    
     IMCmoney = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = 'IMC'")
     IMCmoney = float(str(IMCmoney).replace("[(","").replace(",)]",""))
     
@@ -1001,6 +1005,114 @@ async def payLoan_error(ctx, error):
 #endregion
 
 #endregion
+
+
+#region BiweeklyUpdate
+@bot.command(name='biWeeklyUpdate', description='Update loans and account holdings with interest')
+async def biWeeklyUpdate(message):
+    
+    if str(message.author.id) not in ADMINS:
+        await message.reply("You lack the permissions to run that command")
+        return
+    
+    channel = await bot.fetch_channel(logID)
+    
+    loan_Queries=[]
+    
+    listLoans_Query = f"""
+    SELECT id
+    FROM loans
+    """
+    loans = execute_read_query(connection, listLoans_Query)
+    
+    for i in loans:
+        id = str(i).replace("(","").replace(",)","")
+        
+        amountRemaining = execute_read_query(connection, f"SELECT amountRemaining FROM loans WHERE id = {id}")
+        amountRemaining = float(str(amountRemaining).replace("[(","").replace(",)]",""))
+        
+        interestRate = execute_read_query(connection, f"SELECT interestRate FROM loans WHERE id = {id}")
+        interestRate = float(str(interestRate).replace("[(","").replace(",)]",""))
+        
+        paid = execute_read_query(connection, f"SELECT paid FROM loans WHERE id = {id}")
+        paid = int(str(paid).replace("[(","").replace(",)]",""))
+        
+        discordID = execute_read_query(connection, f"SELECT discordID FROM loans WHERE id = {id}")
+        discordID = int(str(discordID).replace("[(","").replace(",)]",""))
+        discordUser = bot.get_user(discordID)
+        await discordUser.create_dm()
+        
+        newAmount = round(amountRemaining+(amountRemaining*interestRate),2)
+        if paid != 1:
+            lateFee = execute_read_query(connection, f"SELECT lateFee FROM loans WHERE id = {id}")
+            lateFee = int(str(lateFee).replace("[(","").replace(",)]",""))
+            newAmount += lateFee
+            
+            await discordUser.dm_channel.send(f"Your loan with ID: {id} has had its interest calculated. You did not pay during this period, so a late fee of {str(lateFee)} IMC Denars has been added on top of the interest. You now owe {str(newAmount)} IMC Denars. Check the balance command on your account to see the amount you need to pay during the next two weeks.")
+        else:
+            await discordUser.dm_channel.send(f"Your loan with ID: {id} has had its interest calculated. You now owe {str(newAmount)} IMC Denars. Check the balance command on your account to see the amount you need to pay during the next two weeks.")
+        loan_Query=f"UPDATE loans SET amountRemaining = {str(newAmount)}, paid = 0 WHERE id = {id};"
+        
+        loan_Queries.append(loan_Query)
+    
+    logMessage = await channel.send(f'{message.author.name} would like to update loan interests')
+    await logMessage.add_reaction('✅')
+    await logMessage.add_reaction('❌')
+    
+    pendingQueries.append({
+        "type": "many",
+        "query":loan_Queries,
+        "id": logMessage.id,
+        "msg": message,
+        "successMessage": f'Update Completed',
+        "denyMessage": 'Update Denied'
+    })
+    
+    account_Queries=[]
+    
+    listAccounts_Query = f"""
+    SELECT name
+    FROM accounts
+    """
+    accounts = execute_read_query(connection, listAccounts_Query)
+    
+    for i in accounts:
+        name = str(i).replace("(","").replace(",)","")
+        print(name)
+                
+        money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = {name}")
+        money = float(str(money).replace("[(","").replace(",)]",""))
+
+        interestRate = execute_read_query(connection, f"SELECT interestRate FROM accounts WHERE name = {name}")
+        interestRate = float(str(interestRate).replace("[(","").replace(",)]",""))
+        
+        newAmount = round(money+(money*interestRate),2)
+        
+        account_Query=f"UPDATE accounts SET money = {str(newAmount)} WHERE name = {name};"
+        
+        account_Queries.append(account_Query)
+    
+    logMessage = await channel.send(f'{message.author.name} would like to update account holdings for interest')
+    await logMessage.add_reaction('✅')
+    await logMessage.add_reaction('❌')
+    
+    pendingQueries.append({
+        "type": "many",
+        "query":account_Queries,
+        "id": logMessage.id,
+        "msg": message,
+        "successMessage": f'Update Completed',
+        "denyMessage": 'Update Denied'
+    })
+    
+    await message.reply(f'Pending...')
+
+@loanDelete.error
+async def loanDelete_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
 
 #endregion
 
