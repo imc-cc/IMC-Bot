@@ -652,9 +652,6 @@ async def creditScoreIncrease(message, name: str = commands.parameter(descriptio
     creditScore = execute_read_query(connection, f"SELECT creditScore FROM accounts WHERE name = '{name}'")
     creditScore = int(str(creditScore).replace("[(","").replace(",)]",""))
     
-    if creditScore+1 > 6:
-        await message.reply("Credit score cannot go above 6")
-    
     type = execute_read_query(connection, f"SELECT type FROM accounts WHERE name = '{name}'")
     type = str(type).replace("[(","").replace(",)]","").replace("'","")
     
@@ -723,9 +720,6 @@ async def creditScoreDecrease(message, name: str = commands.parameter(descriptio
     
     creditScore = execute_read_query(connection, f"SELECT creditScore FROM accounts WHERE name = '{name}'")
     creditScore = int(str(creditScore).replace("[(","").replace(",)]",""))
-    
-    if creditScore-1 < 0:
-        await message.reply("Credit score cannot go above 6")
     
     type = execute_read_query(connection, f"SELECT type FROM accounts WHERE name = '{name}'")
     type = str(type).replace("[(","").replace(",)]","").replace("'","")
