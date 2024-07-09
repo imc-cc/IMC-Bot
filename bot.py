@@ -5,6 +5,7 @@ import time
 import random
 import sqlite3
 import math
+import asyncio
 from sqlite3 import Error
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -120,6 +121,30 @@ def execute_query_many(connection, queries):
         except Error as e:
             print(f"The error '{e}' occurred")
 
+MINUTES_IN_DAY = 60*24
+
+async def start_daily_cycle():
+    minutes=0
+    while True:
+        print(str(minutes))
+        if minutes >= MINUTES_IN_DAY: await updateMaximums(); minutes = 0;
+        await asyncio.sleep(60)
+        minutes += 1
+
+async def updateMaximums():
+    channel = await bot.fetch_channel(logID)
+    logMessage = await channel.send('Updating account maximums')
+    
+    reset_query = """
+    UPDATE accounts
+    SET amountDeposited = 0,
+        amountWithdrew = 0,
+        amountTransferred = 0"""
+        
+    execute_query(connection, reset_query)
+    
+    await logMessage.reply("Updated")
+    
 #endregion 
 
 #region Commands
@@ -1304,6 +1329,10 @@ async def biWeeklyUpdate(message):
 #endregion
 
 #region Events
+
+@bot.event
+async def on_ready():
+    await start_daily_cycle()
 
 @bot.event
 async def on_reaction_add(reaction, user):
