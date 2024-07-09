@@ -287,13 +287,21 @@ async def accountBalance(message,name: str = commands.parameter(description="Nam
     for i in loans:
         id = str(i).replace("(","").replace(",)","")
         
-        amountRemaining_Query = execute_read_query(connection, f"SELECT amountRemaining FROM loans WHERE id = {id}")
+        amountRemaining = float(str(execute_read_query(connection, f"SELECT amountRemaining FROM loans WHERE id = {id}")).replace("[(","").replace(",)]",""))
+        payPercent = float(str(execute_read_query(connection, f"SELECT payPercent FROM loans WHERE id = {id}")).replace("[(","").replace(",)]",""))
+        payAmount = round(amountRemaining*payPercent,2)
+        paid = int(str(execute_read_query(connection, f"SELECT paid FROM loans WHERE id = {id}")).replace("[(","").replace(",)]",""))
         
-        loanString += "ID: " + id + ";  Amount Remaining: " + str(amountRemaining_Query).replace("[(","").replace(",)]","") + " IMC Denars\n"
-    
+        if paid == 1:
+            paidString = "have"
+        else:
+            paidString = "have not"
+
+        loanString += "ID: " + id + ";  Amount Remaining: " + str(amountRemaining) + " IMC Denars; You must pay " + str(payAmount) + " IMC Denars before the end of the next two week period and you **" + paidString + "** paid it" + "\n\n"
+
     if loanString != "":
         embedVar.add_field(name="Loans", value=f"{str(loanString)}", inline=False)
-    
+
     await message.reply(embed=embedVar)
 
 @accountBalance.error
