@@ -1356,6 +1356,29 @@ async def biWeeklyUpdate(message):
 
 @bot.event
 async def on_ready():
+    
+    #region Setup IMC bank account
+    
+    checkLogin = f"""
+    SELECT *
+    FROM accounts 
+    WHERE name = 'IMC'
+    """
+    
+    check = execute_read_query(connection, checkLogin)
+    
+    if check == []: 
+        
+        create_account= f"""
+        INSERT INTO 
+            accounts (name, password, type, money, interestRate, maxWithdraw, maxDeposit, maxTransfer, creditScore, amountWithdrew, amountDeposited, amountTransferred)
+        VALUES
+            ('IMC', '{os.getenv("IMC_PASSWORD")}', 'Official', 0, 0, 101376, 101376, 101376, 3, 0, 0, 0);"""
+            
+        execute_query(connection, create_account)
+        
+    #endregion
+    
     await start_daily_cycle()
 
 @bot.event
