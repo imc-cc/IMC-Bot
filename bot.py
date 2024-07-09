@@ -1004,10 +1004,54 @@ async def payLoan_error(ctx, error):
         await ctx.send("All arguments not provided, try running the help command")
 #endregion
 
+#region Loan Edit Command
+@bot.command(name='loanEdit', description='Edits loan data')
+async def accountEdit(message, 
+                      id: str = commands.parameter(description="ID of loan"), 
+                      dataToChange: str = commands.parameter(description="Name of data you want to change"), 
+                      newData: str = commands.parameter(description="Data to change it to")):
+    
+    if str(message.author.id) not in ADMINS:
+        await message.reply("You lack the permissions to run that command")
+        return
+    
+    checkLogin = f"""
+    SELECT *
+    FROM loans
+    WHERE id = {id}
+    """
+    check = execute_read_query(connection, checkLogin)
+    print(str(check))
+    if check == []: 
+        await message.reply("Loan not found")
+        return
+    
+    update_query = f"""    UPDATE loans SET {dataToChange} = {newData} WHERE id = {id}    """
+    
+    channel = await bot.fetch_channel(logID)
+    logMessage = await channel.send(f'{message.author.name} would like to edit the data of loan ID: {id}. They wish to change data of {dataToChange} to {newData}')
+    await logMessage.add_reaction('✅')
+    await logMessage.add_reaction('❌')
+        
+    pendingQueries.append({
+        "type": "single",
+        "query":update_query,
+        "id": logMessage.id,
+        "msg": message,
+        "successMessage": f'Update Completed',
+        "denyMessage": 'Update Denied.'
+    })
+    
+    await message.reply("Pending...")
+
+@accountEdit.error
+async def accountEdit_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
 #endregion
 
+#endregion
 
-#region BiweeklyUpdate
 @bot.command(name='biWeeklyUpdate', description='Update loans and account holdings with interest')
 async def biWeeklyUpdate(message):
     
@@ -1106,13 +1150,6 @@ async def biWeeklyUpdate(message):
     })
     
     await message.reply(f'Pending...')
-
-@loanDelete.error
-async def loanDelete_error(ctx, error):
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("All arguments not provided, try running the help command")
-#endregion
-
 
 #endregion
 
