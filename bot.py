@@ -334,6 +334,144 @@ async def bal_error(ctx, error):
         await ctx.send("All arguments not provided, try running the help command")
 #endregion
 
+#region Account Data Command
+@bot.command(name='accountData', description='Finds the balance of an account')
+async def accountData(message,name: str = commands.parameter(description="Name of account")):
+    
+    if str(message.author.id) not in ADMINS:
+        await message.reply("You lack the permissions to run that command")
+        return
+    
+    checkLogin = f"""
+    SELECT *
+    FROM accounts 
+    WHERE name = '{name}'
+    """
+    check = execute_read_query(connection, checkLogin)
+    print(str(check))
+    if check == []:
+        await message.reply("Unable to find account")
+        return
+    
+    #region Embed
+    
+    balance_Query = f"""
+    SELECT money
+    FROM accounts
+    WHERE name = '{name}'
+    """
+    balance = execute_read_query(connection, balance_Query)
+    
+    embedVar = discord.Embed(title=f"{name}", color=0xF5C16A)
+    embedVar.add_field(name="Balance", value=f"{ str(balance).replace("[(","").replace(",)]","") } IMC Denars", inline=True)
+    
+    type_Query = f"""
+    SELECT type
+    FROM accounts
+    WHERE name = '{name}'
+    """
+    type = execute_read_query(connection, type_Query)
+    embedVar.add_field(name="Type", value=f"{ str(type).replace("'","").replace("[(","").replace(",)]","") }", inline=True)
+                       
+    interestRate_Query = f"""
+    SELECT interestRate
+    FROM accounts
+    WHERE name = '{name}'
+    """
+    interestRate = execute_read_query(connection, interestRate_Query)
+    embedVar.add_field(name="Interest Rate", value=f"{ str(float(str(interestRate).replace("'","").replace("[(","").replace(",)]",""))*100) }%", inline=True)
+    
+    maxWithdraw_Query = f"""
+    SELECT maxWithdraw
+    FROM accounts
+    WHERE name = '{name}'
+    """
+    maxWithdraw = execute_read_query(connection, maxWithdraw_Query)
+    embedVar.add_field(name="Maximum Withdraw", value=f"{ str(maxWithdraw).replace("'","").replace("[(","").replace(",)]","") } IMC Denars", inline=True)
+    
+    maxDeposit_Query = f"""
+    SELECT maxDeposit
+    FROM accounts
+    WHERE name = '{name}'
+    """
+    maxDeposit = execute_read_query(connection, maxDeposit_Query)
+    embedVar.add_field(name="Maximum Deposit", value=f"{ str(maxDeposit).replace("'","").replace("[(","").replace(",)]","") } IMC Denars", inline=True)
+    
+    maxTransfer_Query = f"""
+    SELECT maxTransfer
+    FROM accounts
+    WHERE name = '{name}'
+    """
+    maxTransfer = execute_read_query(connection, maxTransfer_Query)
+    embedVar.add_field(name="Maximum Transfer", value=f"{ str(maxTransfer).replace("'","").replace("[(","").replace(",)]","") } IMC Denars", inline=True)
+    
+    amountWithdrew_Query = f"""
+    SELECT amountWithdrew
+    FROM accounts
+    WHERE name = '{name}'
+    """
+    amountWithdrew = execute_read_query(connection, amountWithdrew_Query)
+    embedVar.add_field(name="Amount Withdrew", value=f"{ str(amountWithdrew).replace("'","").replace("[(","").replace(",)]","") } IMC Denars", inline=True)
+    
+    amountDeposited_Query = f"""
+    SELECT amountDeposited
+    FROM accounts
+    WHERE name = '{name}'
+    """
+    amountDeposited = execute_read_query(connection, amountDeposited_Query)
+    embedVar.add_field(name="Amount Deposited", value=f"{ str(amountDeposited).replace("'","").replace("[(","").replace(",)]","") } IMC Denars", inline=True)
+    
+    amountTransferred_Query = f"""
+    SELECT amountTransferred
+    FROM accounts
+    WHERE name = '{name}'
+    """
+    amountTransferred = execute_read_query(connection, amountTransferred_Query)
+    embedVar.add_field(name="Amount Transferred", value=f"{ str(amountTransferred).replace("'","").replace("[(","").replace(",)]","") } IMC Denars", inline=True)
+    
+    creditScore_Query = f"""
+    SELECT creditScore
+    FROM accounts
+    WHERE name = '{name}'
+    """
+    creditScore = execute_read_query(connection, creditScore_Query)
+    embedVar.add_field(name="Credit Score", value=f"{ str(creditScore).replace("'","").replace("[(","").replace(",)]","") }", inline=True)
+    
+    loan_Query = f"""
+    SELECT id
+    FROM loans
+    WHERE accountName = '{name}'
+    """
+    loans = execute_read_query(connection, loan_Query)
+    loanString = ""
+    for i in loans:
+        id = str(i).replace("(","").replace(",)","")
+        
+        amountRemaining = float(str(execute_read_query(connection, f"SELECT amountRemaining FROM loans WHERE id = {id}")).replace("[(","").replace(",)]",""))
+        payPercent = float(str(execute_read_query(connection, f"SELECT payPercent FROM loans WHERE id = {id}")).replace("[(","").replace(",)]",""))
+        payAmount = round(amountRemaining*payPercent,2)
+        paid = int(str(execute_read_query(connection, f"SELECT paid FROM loans WHERE id = {id}")).replace("[(","").replace(",)]",""))
+        
+        if paid == 1:
+            paidString = "have"
+        else:
+            paidString = "have not"
+
+        loanString += "ID: " + id + ";  Amount Remaining: " + str(amountRemaining) + " IMC Denars; You must pay " + str(payAmount) + " IMC Denars before the end of the next two week period and you **" + paidString + "** paid it" + "\n\n"
+
+    if loanString != "":
+        embedVar.add_field(name="Loans", value=f"{str(loanString)}", inline=False)
+
+    #endregion
+
+    await message.reply(embed=embedVar)
+
+@accountData.error
+async def accountData_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
 #endregion
 
 #region Account Data
