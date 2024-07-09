@@ -1,7 +1,6 @@
 # bot.py
 import discord
 import os
-import time
 import random
 import sqlite3
 import math
@@ -344,6 +343,9 @@ async def bal_error(ctx, error):
 async def depositCommand(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account"), amount: str = commands.parameter(description="Amount to deposit"), atmID: str = commands.parameter(description="ID of where you are depositing it")):
     try:
         amount = int(amount)
+        if amount <= 0:
+            await message.reply("Amount must be a positive integer")
+            return
     except:
         await message.reply("Amount must be an integer")
         return
@@ -408,6 +410,9 @@ async def deposit_error(ctx, error):
 async def withdrawCommand(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account"), amount: str = commands.parameter(description="Amount to withdraw"), atmID: str = commands.parameter(description="ID of where you are depositing it")):
     try:
         amount = int(amount)
+        if amount <= 0:
+            await message.reply("Amount must be a positive integer")
+            return
     except:
         await message.reply("Amount must be an integer")
         return
@@ -474,6 +479,9 @@ async def withdraw_error(ctx, error):
 async def transferCommand(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account"), recipientName: str = commands.parameter(description="Name of recipient account"), amount: str = commands.parameter(description="Amount to transfer")):
     try:
         amount = int(amount)
+        if amount <= 0:
+            await message.reply("Amount must be a positive integer")
+            return
     except:
         await message.reply("Amount must be an integer")
         return
@@ -644,6 +652,10 @@ async def creditScoreIncrease(message, name: str = commands.parameter(descriptio
     creditScore = execute_read_query(connection, f"SELECT creditScore FROM accounts WHERE name = '{name}'")
     creditScore = int(str(creditScore).replace("[(","").replace(",)]",""))
     
+    if creditScore+1 > 6:
+        await message.reply("Cannot increase creditscore past 6")
+        return
+    
     type = execute_read_query(connection, f"SELECT type FROM accounts WHERE name = '{name}'")
     type = str(type).replace("[(","").replace(",)]","").replace("'","")
     
@@ -713,6 +725,10 @@ async def creditScoreDecrease(message, name: str = commands.parameter(descriptio
     creditScore = execute_read_query(connection, f"SELECT creditScore FROM accounts WHERE name = '{name}'")
     creditScore = int(str(creditScore).replace("[(","").replace(",)]",""))
     
+    if creditScore-1 < 0:
+        await message.reply("Cannot decrease creditscore below 0")
+        return
+    
     type = execute_read_query(connection, f"SELECT type FROM accounts WHERE name = '{name}'")
     type = str(type).replace("[(","").replace(",)]","").replace("'","")
     
@@ -773,14 +789,18 @@ async def diceRoll(message, name: str = commands.parameter(description="Name of 
     
     try:
         guess = int(guess)
+
     except:
         await message.reply("Guess must be an integer")
         return
         
     try:
         betAmount = int(betAmount)
+        if betAmount <= 0:
+            await message.reply("Bet amount must be a positive integer")
+            return
     except:
-        await message.reply("Bet amount must be an integer")
+        await message.reply("Bet amount must be a positive integer")
         return
     
     if guess not in range(1,7):
@@ -1110,7 +1130,11 @@ async def payLoan(message,
         await message.reply("ID must be an integer")
         return
     
-    try: amount = int(amount)
+    try: 
+        amount = int(amount)
+        if amount <= 0:
+            await message.reply("Amount must be a positive integer")
+            return
     except: 
         await message.reply("Amount must be an integer")
         return
