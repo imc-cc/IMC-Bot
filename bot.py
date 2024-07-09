@@ -55,13 +55,11 @@ CREATE TABLE IF NOT EXISTS accounts (
   name TEXT NOT NULL,
   password TEXT NOT NULL,
   type TEXT NOT NULL,
-  level INTEGER NOT NULL,
   money REAL NOT NULL,
   interestRate REAL NOT NULL,
   maxWithdraw INTEGER NOT NULL,
   maxDeposit INTEGER NOT NULL,
   maxTransfer INTEGER NOT NULL,
-  active INTEGER NOT NULL,
   creditScore INTEGER NOT NULL,
   amountWithdrew INTEGER NOT NULL,
   amountDeposited INTEGER NOT NULL,
@@ -79,7 +77,8 @@ CREATE TABLE IF NOT EXISTS loans (
     amountRemaining REAL NOT NULL,
     discordID INTEGER NOT NULL,
     payPercent REAL NOT NULL,
-    lateFee INTEGER NOT NULL
+    lateFee INTEGER NOT NULL,
+    paid INTEGER NOT NULL
 );
 """
 execute_query(connection, create_loans_table)
@@ -183,9 +182,9 @@ async def createAccount(message, name: str = commands.parameter(description="Nam
     
     create_account= f"""
         INSERT INTO 
-            accounts (name, password, type, level, money, interestRate, maxWithdraw, maxDeposit, maxTransfer, active, creditScore, amountWithdrew, amountDeposited, amountTransferred)
+            accounts (name, password, type, money, interestRate, maxWithdraw, maxDeposit, maxTransfer, creditScore, amountWithdrew, amountDeposited, amountTransferred)
         VALUES
-            ('{name}', '{password}', '{type}', 3, 0, {interestRate}, {maxWithdraw}, {maxDeposit}, {maxTransfer}, 1, 3, 0, 0, 0);"""
+            ('{name}', '{password}', '{type}', 0, {interestRate}, {maxWithdraw}, {maxDeposit}, {maxTransfer}, 3, 0, 0, 0);"""
     
     channel = await bot.fetch_channel(logID)
     logMessage = await channel.send(f'{message.author.name} would like to open a {type} account with name {name} and password {password}')
@@ -268,15 +267,34 @@ async def accountBalance(message,name: str = commands.parameter(description="Nam
         await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
         return
     
-    balanceQuery = f"""
+    balance_Query = f"""
     SELECT money
     FROM accounts
     WHERE password = '{password}' AND name = '{name}'
-    
     """
+    balance = execute_read_query(connection, balance_Query)
     
-    balance = execute_read_query(connection, balanceQuery)
-    await message.reply("Your balance is: " + str(balance).replace("[(","").replace(",)]","") + " IMC Denars")
+    embedVar = discord.Embed(title=f"{name}", color=0xF5C16A)
+    embedVar.add_field(name="Balance", value=f"{ str(balance).replace("[(","").replace(",)]","") } IMC Denars")
+    
+    loan_Query = f"""
+    SELECT id
+    FROM loans
+    WHERE accountName = '{name}'
+    """
+    loans = execute_read_query(connection, loan_Query)
+    loanString = ""
+    for i in loans:
+        id = str(i).replace("(","").replace(",)","")
+        
+        amountRemaining_Query = execute_read_query(connection, f"SELECT amountRemaining FROM loans WHERE id = {id}")
+        
+        loanString += "ID: " + id + ";  Amount Remaining: " + str(amountRemaining_Query).replace("[(","").replace(",)]","") + " IMC Denars\n"
+    
+    if loanString != "":
+        embedVar.add_field(name="Loans", value=f"{str(loanString)}", inline=False)
+    
+    await message.reply(embed=embedVar)
 
 @accountBalance.error
 async def bal_error(ctx, error):
@@ -286,7 +304,7 @@ async def bal_error(ctx, error):
 
 #endregion
 
-#region Data
+#region Account Data
 
 #region Deposit Command
 @bot.command(name='deposit', description="Deposit money into your account")
@@ -709,9 +727,9 @@ async def loanApply(message,
         
     createLoan_query= f"""
     INSERT INTO 
-        loans (accountName, interestRate, originalAmount, amountRemaining, discordID, payPercent, lateFee)
+        loans (accountName, interestRate, originalAmount, amountRemaining, discordID, payPercent, lateFee, paid)
     VALUES
-        ('{name}', {str(interestRate)}, {str(amount)}, {str(amount)}, {message.author.id}, {str(payPercent)}, {str(lateFee)});"""   
+        ('{name}', {str(interestRate)}, {str(amount)}, {str(amount)}, {message.author.id}, {str(payPercent)}, {str(lateFee)}, 0);"""   
     
     money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = '{name}' AND password = '{password}'")
     money = float(str(money).replace("[(","").replace(",)]",""))
@@ -751,8 +769,8 @@ async def loanApply_error(ctx, error):
         await ctx.send("All arguments not provided, try running the help command")
 #endregion
 
-#region loan Negotiate
-@bot.command(name='loanNegotiate', description='Apply for a loan')
+#region Loan Negotiate
+@bot.command(name='loanNegotiate', description='Apply for a loan where you negotiate the terms')
 async def loanNegotiate(message, 
                     name: str = commands.parameter(description="Name of account"), 
                     password: str = commands.parameter(description="Password of account"), 
@@ -813,9 +831,9 @@ async def loanNegotiate(message,
         
     createLoan_query= f"""
     INSERT INTO 
-        loans (accountName, interestRate, originalAmount, amountRemaining, discordID, payPercent, lateFee)
+        loans (accountName, interestRate, originalAmount, amountRemaining, discordID, payPercent, lateFee, paid)
     VALUES
-        ('{name}', {str(interestRate)}, {str(amount)}, {str(amount)}, {message.author.id}, {str(payPercent)}, {str(lateFee)});""" 
+        ('{name}', {str(interestRate)}, {str(amount)}, {str(amount)}, {message.author.id}, {str(payPercent)}, {str(lateFee)}, 0);""" 
         
     money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = '{name}' AND password = '{password}'")
     money = float(str(money).replace("[(","").replace(",)]",""))
@@ -856,7 +874,7 @@ async def loanNegotiate_error(ctx, error):
 #endregion
 
 #region Loan Delete
-@bot.command(name='loanDelete', description='Apply for a loan')
+@bot.command(name='loanDelete', description='Delete a loan')
 async def loanDelete(message, 
                         id: str = commands.parameter(description="ID of loan"), 
                         reason: str = commands.parameter(description="Reason for deleting loan")):
@@ -900,6 +918,84 @@ async def loanDelete(message,
 
 @loanDelete.error
 async def loanDelete_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
+#region Loan Pay
+@bot.command(name='payLoan', description='Pays back part of your loan')
+async def payLoan(message,
+                    name: str = commands.parameter(description="Name of account"),
+                    password: str = commands.parameter(description="Password of account"),
+                    id: str = commands.parameter(description="ID of loan you wish to pay"),
+                    amount: str = commands.parameter(description="Amount you would like to pay back")):
+    
+    try: int(id)
+    except: 
+        await message.reply("ID must be an integer")
+        return
+    
+    try: amount = int(amount)
+    except: 
+        await message.reply("Amount must be an integer")
+        return
+    
+    checkLogin = f"""
+    SELECT *
+    FROM accounts 
+    WHERE name = '{name}' AND password = '{password}'
+    """
+    check = execute_read_query(connection, checkLogin)
+    print(str(check))
+    if check == []:
+        await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
+        return
+    
+    checkLoan = f"""
+    SELECT amountRemaining
+    FROM loans 
+    WHERE id = {id} AND accountName = '{name}'
+    """
+    check = execute_read_query(connection, checkLoan)
+    print(str(check))
+    if check == []:
+        await message.reply("Unable to find loan or loan is not on this account")
+        return
+    
+    amountRemaining = float(str(check).replace("[(","").replace(",)]",""))
+    
+    if amount > amountRemaining:
+        await message.reply("You cannot pay back more money than is remaining on the loan")
+        return
+    
+    payPercent = execute_read_query(connection, f"SELECT payPercent FROM loans WHERE id = {id} AND accountName = '{name}'")
+    payPercent = float(str(payPercent).replace("[(","").replace(",)]",""))
+    
+    if (amount < amountRemaining*payPercent) and (amountRemaining-amount >= amountRemaining*payPercent):
+        await message.reply("You cannot pay less than your minimum pay percent")
+        return
+    
+    money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = '{name}' AND password = '{password}'")
+    money = float(str(money).replace("[(","").replace(",)]",""))
+    
+    IMCmoney = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = 'IMC'")
+    IMCmoney = float(str(IMCmoney).replace("[(","").replace(",)]",""))
+    
+    pay_Query=f"UPDATE accounts SET money = {str(money-amount)} WHERE name = '{name}' AND password = '{password}';"
+    recieve_Query=f"UPDATE accounts SET money = {str(IMCmoney+amount)} WHERE name = 'IMC';"
+    loan_Query=f"UPDATE loans SET amountRemaining = {str(amountRemaining-amount)}, paid = 1 WHERE id = {id} AND accountName = '{name}';"
+    
+    queries = [pay_Query,recieve_Query,loan_Query]
+    execute_query_many(connection,queries)
+    
+    await message.reply("Loan Payment Completed")
+    
+    if amountRemaining-amount < 1:
+        execute_query(connection, f"DELETE FROM loans WHERE id = {id}")
+        await message.reply("Loan fully paid!")
+
+@payLoan.error
+async def payLoan_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("All arguments not provided, try running the help command")
 #endregion
