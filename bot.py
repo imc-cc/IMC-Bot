@@ -161,19 +161,19 @@ async def createAccount(message, name: str = commands.parameter(description="Nam
     
     if type == "Checking":
         interestRate = 0.02
-        maxWithdraw = 1024
-        maxDeposit = 1024
-        maxTransfer = 1024
-    elif type == "Savings":
-        interestRate = 0.04
         maxWithdraw = 512
         maxDeposit = 512
         maxTransfer = 512
+    elif type == "Savings":
+        interestRate = 0.04
+        maxWithdraw = 256
+        maxDeposit = 256
+        maxTransfer = 256
     elif type == "Business":
         interestRate = 0.02
-        maxWithdraw = 2048
-        maxDeposit = 2048
-        maxTransfer = 2048
+        maxWithdraw = 1024
+        maxDeposit = 1024
+        maxTransfer = 1024
     elif type == "Government":
         interestRate = 0.02
         maxWithdraw = 3072
@@ -594,6 +594,148 @@ async def accountEdit(message, name: str = commands.parameter(description="Name 
 async def accountEdit_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
+#region Credit Score Commands
+
+#region Creditscore Increase Command
+@bot.command(name='creditScoreIncrease', description='Increases an accounts credit score')
+async def creditScoreIncrease(message, name: str = commands.parameter(description="Name of account")):
+    if str(message.author.id) not in ADMINS:
+        await message.reply("You lack the permissions to run that command")
+        return
+    
+    checkLogin = f"""
+    SELECT *
+    FROM accounts 
+    WHERE name = '{name}'
+    """
+    check = execute_read_query(connection, checkLogin)
+    print(str(check))
+    if check == []: 
+        await message.reply("Account not found")
+        return
+    
+    creditScore = execute_read_query(connection, f"SELECT creditScore FROM accounts WHERE name = '{name}'")
+    creditScore = int(str(creditScore).replace("[(","").replace(",)]",""))
+    
+    type = execute_read_query(connection, f"SELECT type FROM accounts WHERE name = '{name}'")
+    type = str(type).replace("[(","").replace(",)]","").replace("'","")
+    
+    increment = 32
+    if type == "Checking": increment = 160
+    elif type == "Savings": increment = 64
+    elif type == "Business": increment = 256
+    elif type == "Government": increment = 512
+    
+    maxWithdraw = execute_read_query(connection, f"SELECT maxWithdraw FROM accounts WHERE name = '{name}'")
+    maxWithdraw = int(str(maxWithdraw).replace("[(","").replace(",)]",""))
+    
+    maxDeposit = execute_read_query(connection, f"SELECT maxDeposit FROM accounts WHERE name = '{name}'")
+    maxDeposit = int(str(maxDeposit).replace("[(","").replace(",)]",""))
+    
+    maxTransfer = execute_read_query(connection, f"SELECT maxTransfer FROM accounts WHERE name = '{name}'")
+    maxTransfer = int(str(maxTransfer).replace("[(","").replace(",)]",""))
+    
+    update_query = f"""    
+    UPDATE accounts 
+    SET creditScore = {str(creditScore+1)},
+        maxWithdraw = {str(maxWithdraw+increment)},
+        maxDeposit = {str(maxDeposit+increment)},
+        maxTransfer = {str(maxTransfer+increment)}   
+    WHERE name = '{name}'    """
+    
+    channel = await bot.fetch_channel(logID)
+    logMessage = await channel.send(f'{message.author.name} would like to increase the credit score of account {name}. Their new credit score will be {str(creditScore+1)}')
+    await logMessage.add_reaction('✅')
+    await logMessage.add_reaction('❌')
+    
+    pendingQueries.append({
+        "type": "single",
+        "query":update_query,
+        "id": logMessage.id,
+        "msg": message,
+        "successMessage": f'Update Completed',
+        "denyMessage": 'Update Denied.'
+    })
+    
+    await message.reply("Pending...")
+
+@creditScoreIncrease.error
+async def creditScoreIncrease_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
+#region Creditscore Decrease Command
+@bot.command(name='creditScoreDecrease', description='Decreases an accounts credit score')
+async def creditScoreDecrease(message, name: str = commands.parameter(description="Name of account")):
+    if str(message.author.id) not in ADMINS:
+        await message.reply("You lack the permissions to run that command")
+        return
+    
+    checkLogin = f"""
+    SELECT *
+    FROM accounts 
+    WHERE name = '{name}'
+    """
+    check = execute_read_query(connection, checkLogin)
+    print(str(check))
+    if check == []: 
+        await message.reply("Account not found")
+        return
+    
+    creditScore = execute_read_query(connection, f"SELECT creditScore FROM accounts WHERE name = '{name}'")
+    creditScore = int(str(creditScore).replace("[(","").replace(",)]",""))
+    
+    type = execute_read_query(connection, f"SELECT type FROM accounts WHERE name = '{name}'")
+    type = str(type).replace("[(","").replace(",)]","").replace("'","")
+    
+    increment = 32
+    if type == "Checking": increment = 160
+    elif type == "Savings": increment = 64
+    elif type == "Business": increment = 256
+    elif type == "Government": increment = 512
+    
+    maxWithdraw = execute_read_query(connection, f"SELECT maxWithdraw FROM accounts WHERE name = '{name}'")
+    maxWithdraw = int(str(maxWithdraw).replace("[(","").replace(",)]",""))
+    
+    maxDeposit = execute_read_query(connection, f"SELECT maxDeposit FROM accounts WHERE name = '{name}'")
+    maxDeposit = int(str(maxDeposit).replace("[(","").replace(",)]",""))
+    
+    maxTransfer = execute_read_query(connection, f"SELECT maxTransfer FROM accounts WHERE name = '{name}'")
+    maxTransfer = int(str(maxTransfer).replace("[(","").replace(",)]",""))
+    
+    update_query = f"""    
+    UPDATE accounts 
+    SET creditScore = {str(creditScore-1)},
+        maxWithdraw = {str(maxWithdraw-increment)},
+        maxDeposit = {str(maxDeposit-increment)},
+        maxTransfer = {str(maxTransfer-increment)}   
+    WHERE name = '{name}'    """
+    
+    channel = await bot.fetch_channel(logID)
+    logMessage = await channel.send(f'{message.author.name} would like to decrease the credit score of account {name}. Their new credit score will be {str(creditScore-1)}')
+    await logMessage.add_reaction('✅')
+    await logMessage.add_reaction('❌')
+    
+    pendingQueries.append({
+        "type": "single",
+        "query":update_query,
+        "id": logMessage.id,
+        "msg": message,
+        "successMessage": f'Update Completed',
+        "denyMessage": 'Update Denied.'
+    })
+    
+    await message.reply("Pending...")
+
+@creditScoreDecrease.error
+async def creditScoreDecrease_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
 #endregion
 
 #endregion
