@@ -1665,10 +1665,16 @@ async def on_ready():
         
     #endregion
     
+    activity = discord.Game(name="Banking on Cinder")
+    await bot.change_presence(status=discord.Status.online, activity=activity)
+    
     await start_daily_cycle()
+    
+    
 
 @bot.event
 async def on_reaction_add(reaction, user):
+    
     if(user == bot.user):
         return
     
