@@ -103,6 +103,8 @@ def execute_read_query(connection, query):
         print(f"The error '{e}' occurred")
      
 logID = os.getenv("LOG_CHANNEL_ID")
+suggestionID = os.getenv("SUGGESTION_CHANNEL_ID")
+complaintID = os.getenv("COMPLAINT_CHANNEL_ID")
 
 #Create pending queries list
 pendingQueries = [] 
@@ -155,7 +157,7 @@ async def updateMaximums():
 
 #region Commands
 
-#region Utilities
+#region Utilities/Miscellaneous
 
 @bot.command(name='closeDoor', description='Stops the bot')
 async def stopCommand(message):
@@ -166,6 +168,60 @@ async def stopCommand(message):
     await message.reply("Stopping")
     
     quit()
+
+@bot.command(name='credits', description='Shows the credits for the IMC')
+async def creditsCommand(ctx):
+    
+    embedVar = discord.Embed(title=f"Credits", color=0xF5C16A)
+    embedVar.add_field(name="Founders", value=f"""
+                       \nToiletLad - Personal Relations Beaver 
+                       GlitchTime - Professional Door Closer 
+                       ErrorCode864G - Programmer 
+                       Pinka - ... 
+                       """, inline=False)
+    
+    embedVar.add_field(name="Employees", value=f"""
+                       \nDarkMagician404 - ATM Refiller 
+                       """, inline=False)
+    
+    embedVar.add_field(name="Nation Sponsers", value=f"""
+                        \nCrescent Union 
+                        Sprucia 
+                        """, inline=False)
+    
+    await ctx.reply(embed=embedVar)
+
+#region Suggestion Command
+@bot.command(name='suggest', description='Submit a suggestion. WARNING: use quotation marks if it includes more than one word!')
+async def suggestCommand(message, suggestion: str = commands.parameter(description="The suggestion you wish to submit")):
+    channel = await bot.fetch_channel(suggestionID)
+    suggestMessage = await channel.send(suggestion)
+    await suggestMessage.add_reaction('✅')
+    await suggestMessage.add_reaction('❌')
+    
+    await message.reply("Suggestion complete")
+
+@suggestCommand.error
+async def suggestCommand_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
+#region Complaint Command
+@bot.command(name='complain', description='Submit a complaint. WARNING: use quotation marks if it includes more than one word!')
+async def complainCommand(message, complaint: str = commands.parameter(description="The complaint you wish to submit")):
+    channel = await bot.fetch_channel(complaintID)
+    complainMessage = await channel.send(complaint)
+    await complainMessage.add_reaction('✅')
+    await complainMessage.add_reaction('❌')
+    
+    await message.reply("Suggestion complete")
+
+@complainCommand.error
+async def complainCommand_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
 
 #endregion
 
@@ -928,6 +984,7 @@ async def creditScoreDecrease_error(ctx, error):
 
 #region Gambling
 
+'''
 #region Dice Roll Command
 @bot.command(name='dice', description='gamble on a dice roll')
 async def diceRoll(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account"), guess: str = commands.parameter(description="Which number you would like to bet on"), betAmount: str = commands.parameter(description="How much you would like to bet")):
@@ -998,6 +1055,7 @@ async def diceRoll_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("All arguments not provided, try running the help command")
 #endregion
+'''
 
 #region Lottery
 
@@ -1469,7 +1527,7 @@ async def payLoan_error(ctx, error):
 
 #region Loan Edit Command
 @bot.command(name='loanEdit', description='Edits loan data')
-async def accountEdit(message, 
+async def loanEdit(message, 
                       id: str = commands.parameter(description="ID of loan"), 
                       dataToChange: str = commands.parameter(description="Name of data you want to change"), 
                       newData: str = commands.parameter(description="Data to change it to")):
@@ -1507,8 +1565,8 @@ async def accountEdit(message,
     
     await message.reply("Pending...")
 
-@accountEdit.error
-async def accountEdit_error(ctx, error):
+@loanEdit.error
+async def loanEdit_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("All arguments not provided, try running the help command")
 #endregion
@@ -1669,12 +1727,9 @@ async def on_ready():
     await bot.change_presence(status=discord.Status.online, activity=activity)
     
     await start_daily_cycle()
-    
-    
 
 @bot.event
 async def on_reaction_add(reaction, user):
-    
     if(user == bot.user):
         return
     
