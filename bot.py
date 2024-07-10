@@ -83,6 +83,13 @@ CREATE TABLE IF NOT EXISTS loans (
 """
 execute_query(connection, create_loans_table)
 
+create_lottery_table = """
+CREATE TABLE IF NOT EXISTS lottery (
+    accountName TEXT NOT NULL
+);
+"""
+execute_query(connection, create_lottery_table)
+
 #endregion
 
 def execute_read_query(connection, query):
@@ -992,6 +999,120 @@ async def diceRoll_error(ctx, error):
         await ctx.send("All arguments not provided, try running the help command")
 #endregion
 
+#region Lottery
+
+TICKET_COST = 8
+PERCENT_PROFIT = 0.1
+
+#region Buy Lottery Ticket Command
+@bot.command(name='buyLotteryTicket', description='buy a lottery ticket')
+async def buyLotteryTicket(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account")):
+    
+    checkLogin = f"""
+    SELECT *
+    FROM accounts 
+    WHERE name = '{name}'"""
+    
+    check = execute_read_query(connection, checkLogin)
+    if check == []: 
+        await message.reply("Incorrect username or password.")
+        return
+    
+    money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = '{name}' AND password = '{password}'")
+    money = float(str(money).replace("[(","").replace(",)]",""))
+    
+    if money - TICKET_COST < 0:
+        await message.reply("You lack the funds for that transaction")
+        return
+    
+    createTicket_Query= f"""
+    INSERT INTO 
+        lottery (accountName)
+    VALUES
+        ('{name}');"""
+            
+    pay_Query=f"""
+    UPDATE accounts
+    SET money = {str(round(money-TICKET_COST,2))}
+    WHERE name = '{name}' AND password = '{password}'
+    """
+    
+    moneyLottery = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = 'Lottery'")
+    moneyLottery = round(float(str(moneyLottery).replace("[(","").replace(",)]","")),2)
+    
+    lottery_Query=f"""
+    UPDATE accounts
+    SET money = {str( moneyLottery+(TICKET_COST*(1-PERCENT_PROFIT)) )}
+    WHERE name = 'Lottery'
+    """
+    
+    moneyIMC = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = 'IMC'")
+    moneyIMC = round(float(str(moneyIMC).replace("[(","").replace(",)]","")),2)
+    
+    IMC_Query=f"""
+    UPDATE accounts
+    SET money = {str( moneyIMC+(TICKET_COST*PERCENT_PROFIT) )}
+    WHERE name = 'IMC'
+    """
+    
+    queries=[createTicket_Query, pay_Query, lottery_Query, IMC_Query]
+            
+    execute_query_many(connection, queries)
+    
+    await message.reply("Ticket Purchased")
+
+@buyLotteryTicket.error
+async def buyLotteryTicket_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
+#region End Lottery Command
+@bot.command(name='endLottery', description='Rolls for a lottery winner and deposits the money')
+async def endLottery(message):
+    
+    if str(message.author.id) not in ADMINS:
+        await message.reply("You lack the permissions to run that command")
+        return
+    
+    tickets = execute_read_query(connection, "SELECT accountName FROM lottery")
+    randNumber = random.randint(1,len(tickets))
+    
+    name = str(tickets[randNumber]).replace("(","").replace(",)","")
+      
+    winnings = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = 'Lottery'")
+    winnings = str(round(float(str(winnings).replace("[(","").replace(",)]","")),2))
+                                                                             
+    win_Query= f"UPDATE accounts SET money = money + {winnings} WHERE name = {name}"
+    pay_Query = "UPDATE accounts SET money = 0 WHERE name = 'Lottery'"
+    delete_Query= "DELETE FROM lottery"
+    
+    queries = [win_Query,pay_Query,delete_Query]
+    
+    channel = await bot.fetch_channel(logID)
+    logMessage = await channel.send(f'{message.author.name} would like to end the lottery and roll a winner')
+    await logMessage.add_reaction('✅')
+    await logMessage.add_reaction('❌')
+    
+    pendingQueries.append({
+        "type": "many",
+        "query":queries,
+        "id": logMessage.id,
+        "msg": message,
+        "successMessage": f"The winner is the account with name {name} and they won {winnings} IMC Denars",
+        "denyMessage": 'Lottery roll denied'
+    })
+    
+    await message.reply("Pending...")
+
+@endLottery.error
+async def endLottery_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
+#endregion
+
 #endregion
 
 #region Loans
@@ -1517,6 +1638,28 @@ async def on_ready():
             accounts (name, password, type, money, interestRate, maxWithdraw, maxDeposit, maxTransfer, creditScore, amountWithdrew, amountDeposited, amountTransferred)
         VALUES
             ('IMC', '{os.getenv("IMC_PASSWORD")}', 'Official', 0, 0, 101376, 101376, 101376, 3, 0, 0, 0);"""
+            
+        execute_query(connection, create_account)
+        
+    #endregion
+    
+    #region Setup Lottery bank account
+    
+    checkLogin = f"""
+    SELECT *
+    FROM accounts 
+    WHERE name = 'Lottery'
+    """
+    
+    check = execute_read_query(connection, checkLogin)
+    
+    if check == []: 
+        
+        create_account= f"""
+        INSERT INTO 
+            accounts (name, password, type, money, interestRate, maxWithdraw, maxDeposit, maxTransfer, creditScore, amountWithdrew, amountDeposited, amountTransferred)
+        VALUES
+            ('Lottery', '{os.getenv("LOTTERY_PASSWORD")}', 'Official', 0, 0, 101376, 101376, 101376, 3, 0, 0, 0);"""
             
         execute_query(connection, create_account)
         
