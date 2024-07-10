@@ -237,7 +237,7 @@ async def createAccount(message, name: str = commands.parameter(description="Nam
     WHERE name = '{name}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check != []: 
         await message.reply("Account name is taken. Try again with a new name")
         return
@@ -287,7 +287,7 @@ async def createAccount(message, name: str = commands.parameter(description="Nam
         "denyMessage": 'Account creation denied. Message bank staff for more details. Sorry for the inconvenience!'
     })
     
-    await message.reply(f'Pending...')
+    await message.reply(f'Awaiting Approval...')
 
 @createAccount.error
 async def createAccount_error(ctx, error):
@@ -305,7 +305,7 @@ async def deleteAccount(message, name: str = commands.parameter(description="Nam
     WHERE name = '{name}' AND password = '{password}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []:
         await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
         return
@@ -331,7 +331,7 @@ async def deleteAccount(message, name: str = commands.parameter(description="Nam
         "denyMessage": 'Account deletion denied. Message bank staff for more details. Sorry for the inconvenience!'
     })
     
-    await message.reply(f'Pending...')
+    await message.reply(f'Awaiting Approval...')
 
 @deleteAccount.error
 async def deleteAccount_error(ctx, error):
@@ -349,7 +349,7 @@ async def accountBalance(message,name: str = commands.parameter(description="Nam
     WHERE name = '{name}' AND password = '{password}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []:
         await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
         return
@@ -411,7 +411,7 @@ async def accountData(message,name: str = commands.parameter(description="Name o
     WHERE name = '{name}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []:
         await message.reply("Unable to find account")
         return
@@ -557,7 +557,7 @@ async def depositCommand(message, name: str = commands.parameter(description="Na
     WHERE name = '{name}' AND password = '{password}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []:
         await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
         return
@@ -598,7 +598,7 @@ async def depositCommand(message, name: str = commands.parameter(description="Na
             "denyMessage": 'Deposit denied. Message bank staff for more details. Sorry for the inconvenience!'
         })
         
-        await message.reply("Pending...")
+        await message.reply("Awaiting approval because you have surpassed your account's daily limit...")
 
 @depositCommand.error
 async def deposit_error(ctx, error):
@@ -667,7 +667,7 @@ async def withdrawCommand(message, name: str = commands.parameter(description="N
             "denyMessage": 'Withdraw denied. Message bank staff for more details. The most likely reason is that you withdrew past your max withdraw amount. Sometimes we will allow this, but that is the exception not the rule. Sorry for the inconvenience!'
         })
         
-        await message.reply("Pending...")
+        await message.reply("Awaiting approval because you have surpassed your account's daily limit...")
 
 @withdrawCommand.error
 async def withdraw_error(ctx, error):
@@ -693,7 +693,7 @@ async def transferCommand(message, name: str = commands.parameter(description="N
     WHERE name = '{name}' AND password = '{password}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []:
         await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
         return 
@@ -704,7 +704,7 @@ async def transferCommand(message, name: str = commands.parameter(description="N
     WHERE name = '{recipientName}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []:
         await message.reply("Unable to find recipient. If you believe that you have the correct account name, contact bank staff.")
         return 
@@ -752,7 +752,7 @@ async def transferCommand(message, name: str = commands.parameter(description="N
             "denyMessage": 'Transfer denied. Message bank staff for more details. The most likely reason is that you transferred past your max transfer amount. Sometimes we will allow this, but that is the exception not the rule. Sorry for the inconvenience!'
         })
         
-        await message.reply("Pending...")
+        await message.reply("Awaiting approval because you have surpassed your account's daily limit...")
 
 @transferCommand.error
 async def transfer_error(ctx, error):
@@ -801,7 +801,7 @@ async def accountEdit(message, name: str = commands.parameter(description="Name 
     WHERE name = '{name}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []: 
         await message.reply("Account not found")
         return
@@ -822,7 +822,7 @@ async def accountEdit(message, name: str = commands.parameter(description="Name 
         "denyMessage": 'Update Denied.'
     })
     
-    await message.reply("Pending...")
+    await message.reply("Awaiting Approval...")
 
 @accountEdit.error
 async def accountEdit_error(ctx, error):
@@ -845,7 +845,7 @@ async def creditScoreIncrease(message, name: str = commands.parameter(descriptio
     WHERE name = '{name}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []: 
         await message.reply("Account not found")
         return
@@ -897,7 +897,7 @@ async def creditScoreIncrease(message, name: str = commands.parameter(descriptio
         "denyMessage": 'Update Denied.'
     })
     
-    await message.reply("Pending...")
+    await message.reply("Awaiting Approval...")
 
 @creditScoreIncrease.error
 async def creditScoreIncrease_error(ctx, error):
@@ -918,7 +918,7 @@ async def creditScoreDecrease(message, name: str = commands.parameter(descriptio
     WHERE name = '{name}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []: 
         await message.reply("Account not found")
         return
@@ -970,7 +970,7 @@ async def creditScoreDecrease(message, name: str = commands.parameter(descriptio
         "denyMessage": 'Update Denied.'
     })
     
-    await message.reply("Pending...")
+    await message.reply("Awaiting Approval...")
 
 @creditScoreDecrease.error
 async def creditScoreDecrease_error(ctx, error):
@@ -1022,14 +1022,11 @@ async def diceRoll(message, name: str = commands.parameter(description="Name of 
     money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = '{name}' AND password = '{password}'")
     money = float(str(money).replace("[(","").replace(",)]",""))
     
-    print(str(money))
-    
     if money < betAmount:
         await message.reply("You lack the funds for that transaction.")
         return
     
     roll = random.randint(1,6)
-    print(str(roll))
     
     channel = await bot.fetch_channel(logID)
     
@@ -1161,7 +1158,7 @@ async def endLottery(message):
         "denyMessage": 'Lottery roll denied'
     })
     
-    await message.reply("Pending...")
+    await message.reply("Awaiting Approval...")
 
 @endLottery.error
 async def endLottery_error(ctx, error):
@@ -1275,7 +1272,7 @@ async def loanApply(message,
         "denyMessage": 'Loan denied. Message bank staff for more details. Sorry for the inconvenience!'
     })
     
-    await message.reply("Awaiting approval")
+    await message.reply("Awaiting Approval...")
 
 @loanApply.error
 async def loanApply_error(ctx, error):
@@ -1403,7 +1400,7 @@ async def loanDelete(message,
     WHERE id = {id}
     """
     check = execute_read_query(connection, checkLoan)
-    print(str(check))
+    
     if check == []:
         await message.reply("Unable to find loan.")
         return
@@ -1428,7 +1425,7 @@ async def loanDelete(message,
         "denyMessage": 'Loan deletion denied. Message bank staff for more details. Sorry for the inconvenience!'
     })
     
-    await message.reply(f'Pending...')
+    await message.reply(f'Awaiting Approval...')
 
 @loanDelete.error
 async def loanDelete_error(ctx, error):
@@ -1464,7 +1461,7 @@ async def payLoan(message,
     WHERE name = '{name}' AND password = '{password}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []:
         await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
         return
@@ -1475,7 +1472,7 @@ async def payLoan(message,
     WHERE id = {id} AND accountName = '{name}'
     """
     check = execute_read_query(connection, checkLoan)
-    print(str(check))
+    
     if check == []:
         await message.reply("Unable to find loan or loan is not on this account")
         return
@@ -1542,7 +1539,7 @@ async def loanEdit(message,
     WHERE id = {id}
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []: 
         await message.reply("Loan not found")
         return
@@ -1563,7 +1560,7 @@ async def loanEdit(message,
         "denyMessage": 'Update Denied.'
     })
     
-    await message.reply("Pending...")
+    await message.reply("Awaiting Approval...")
 
 @loanEdit.error
 async def loanEdit_error(ctx, error):
@@ -1643,7 +1640,6 @@ async def biWeeklyUpdate(message):
     
     for i in accounts:
         name = str(i).replace("(","").replace(",)","")
-        print(name)
                 
         money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = {name}")
         money = float(str(money).replace("[(","").replace(",)]",""))
