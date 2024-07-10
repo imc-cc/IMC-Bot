@@ -996,6 +996,8 @@ async def diceRoll_error(ctx, error):
 
 #region Loans
 
+LOAN_FEE = 4
+
 #region Loan Apply
 @bot.command(name='loanApply', description='Apply for a loan')
 async def loanApply(message, 
@@ -1062,7 +1064,7 @@ async def loanApply(message,
     INSERT INTO 
         loans (accountName, interestRate, originalAmount, amountRemaining, discordID, payPercent, lateFee, paid)
     VALUES
-        ('{name}', {str(interestRate)}, {str(amount)}, {str(amount)}, {message.author.id}, {str(payPercent)}, {str(lateFee)}, 0);"""   
+        ('{name}', {str(interestRate)}, {str(amount)}, {str(amount+LOAN_FEE)}, {message.author.id}, {str(payPercent)}, {str(lateFee)}, 0);"""   
     
     money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = '{name}' AND password = '{password}'")
     money = float(str(money).replace("[(","").replace(",)]",""))
@@ -1166,7 +1168,7 @@ async def loanNegotiate(message,
     INSERT INTO 
         loans (accountName, interestRate, originalAmount, amountRemaining, discordID, payPercent, lateFee, paid)
     VALUES
-        ('{name}', {str(interestRate)}, {str(amount)}, {str(amount)}, {message.author.id}, {str(payPercent)}, {str(lateFee)}, 0);""" 
+        ('{name}', {str(interestRate)}, {str(amount)}, {str(amount+LOAN_FEE)}, {message.author.id}, {str(payPercent)}, {str(lateFee)}, 0);""" 
         
     money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = '{name}' AND password = '{password}'")
     money = float(str(money).replace("[(","").replace(",)]",""))
@@ -1328,6 +1330,9 @@ async def payLoan(message,
     
     queries = [pay_Query,recieve_Query,loan_Query]
     execute_query_many(connection,queries)
+    
+    channel = await bot.fetch_channel(logID)
+    await channel.send(f'{message.author.name} has paid back part of loan ID: {id}. It has {str(round(amountRemaining-amount,2))} IMC Denars remaining.')
     
     await message.reply("Loan Payment Completed")
     
