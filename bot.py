@@ -103,6 +103,8 @@ def execute_read_query(connection, query):
         print(f"The error '{e}' occurred")
      
 logID = os.getenv("LOG_CHANNEL_ID")
+suggestionID = os.getenv("SUGGESTION_CHANNEL_ID")
+complaintID = os.getenv("COMPLAINT_CHANNEL_ID")
 
 #Create pending queries list
 pendingQueries = [] 
@@ -155,7 +157,7 @@ async def updateMaximums():
 
 #region Commands
 
-#region Utilities
+#region Utilities/Miscellaneous
 
 @bot.command(name='closeDoor', description='Stops the bot')
 async def stopCommand(message):
@@ -166,6 +168,60 @@ async def stopCommand(message):
     await message.reply("Stopping")
     
     quit()
+
+@bot.command(name='credits', description='Shows the credits for the IMC')
+async def creditsCommand(ctx):
+    
+    embedVar = discord.Embed(title=f"Credits", color=0xF5C16A)
+    embedVar.add_field(name="Founders", value=f"""
+                       \nToiletLad - Personal Relations Beaver 
+                       GlitchTime - Professional Door Closer 
+                       ErrorCode864G - Programmer 
+                       Pinka - ... 
+                       """, inline=False)
+    
+    embedVar.add_field(name="Employees", value=f"""
+                       \nDarkMagician404 - ATM Refiller 
+                       """, inline=False)
+    
+    embedVar.add_field(name="Nation Sponsers", value=f"""
+                        \nCrescent Union 
+                        Sprucia 
+                        """, inline=False)
+    
+    await ctx.reply(embed=embedVar)
+
+#region Suggestion Command
+@bot.command(name='suggest', description='Submit a suggestion. WARNING: use quotation marks if it includes more than one word!')
+async def suggestCommand(message, suggestion: str = commands.parameter(description="The suggestion you wish to submit")):
+    channel = await bot.fetch_channel(suggestionID)
+    suggestMessage = await channel.send(suggestion)
+    await suggestMessage.add_reaction('✅')
+    await suggestMessage.add_reaction('❌')
+    
+    await message.reply("Suggestion complete")
+
+@suggestCommand.error
+async def suggestCommand_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
+
+#region Complaint Command
+@bot.command(name='complain', description='Submit a complaint. WARNING: use quotation marks if it includes more than one word!')
+async def complainCommand(message, complaint: str = commands.parameter(description="The complaint you wish to submit")):
+    channel = await bot.fetch_channel(complaintID)
+    complainMessage = await channel.send(complaint)
+    await complainMessage.add_reaction('✅')
+    await complainMessage.add_reaction('❌')
+    
+    await message.reply("Suggestion complete")
+
+@complainCommand.error
+async def complainCommand_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("All arguments not provided, try running the help command")
+#endregion
 
 #endregion
 
@@ -181,7 +237,7 @@ async def createAccount(message, name: str = commands.parameter(description="Nam
     WHERE name = '{name}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check != []: 
         await message.reply("Account name is taken. Try again with a new name")
         return
@@ -231,7 +287,7 @@ async def createAccount(message, name: str = commands.parameter(description="Nam
         "denyMessage": 'Account creation denied. Message bank staff for more details. Sorry for the inconvenience!'
     })
     
-    await message.reply(f'Pending...')
+    await message.reply(f'Awaiting Approval...')
 
 @createAccount.error
 async def createAccount_error(ctx, error):
@@ -249,7 +305,7 @@ async def deleteAccount(message, name: str = commands.parameter(description="Nam
     WHERE name = '{name}' AND password = '{password}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []:
         await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
         return
@@ -275,7 +331,7 @@ async def deleteAccount(message, name: str = commands.parameter(description="Nam
         "denyMessage": 'Account deletion denied. Message bank staff for more details. Sorry for the inconvenience!'
     })
     
-    await message.reply(f'Pending...')
+    await message.reply(f'Awaiting Approval...')
 
 @deleteAccount.error
 async def deleteAccount_error(ctx, error):
@@ -293,7 +349,7 @@ async def accountBalance(message,name: str = commands.parameter(description="Nam
     WHERE name = '{name}' AND password = '{password}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []:
         await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
         return
@@ -355,7 +411,7 @@ async def accountData(message,name: str = commands.parameter(description="Name o
     WHERE name = '{name}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []:
         await message.reply("Unable to find account")
         return
@@ -501,7 +557,7 @@ async def depositCommand(message, name: str = commands.parameter(description="Na
     WHERE name = '{name}' AND password = '{password}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []:
         await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
         return
@@ -542,7 +598,7 @@ async def depositCommand(message, name: str = commands.parameter(description="Na
             "denyMessage": 'Deposit denied. Message bank staff for more details. Sorry for the inconvenience!'
         })
         
-        await message.reply("Pending...")
+        await message.reply("Awaiting approval because you have surpassed your account's daily limit...")
 
 @depositCommand.error
 async def deposit_error(ctx, error):
@@ -611,7 +667,7 @@ async def withdrawCommand(message, name: str = commands.parameter(description="N
             "denyMessage": 'Withdraw denied. Message bank staff for more details. The most likely reason is that you withdrew past your max withdraw amount. Sometimes we will allow this, but that is the exception not the rule. Sorry for the inconvenience!'
         })
         
-        await message.reply("Pending...")
+        await message.reply("Awaiting approval because you have surpassed your account's daily limit...")
 
 @withdrawCommand.error
 async def withdraw_error(ctx, error):
@@ -637,7 +693,7 @@ async def transferCommand(message, name: str = commands.parameter(description="N
     WHERE name = '{name}' AND password = '{password}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []:
         await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
         return 
@@ -648,7 +704,7 @@ async def transferCommand(message, name: str = commands.parameter(description="N
     WHERE name = '{recipientName}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []:
         await message.reply("Unable to find recipient. If you believe that you have the correct account name, contact bank staff.")
         return 
@@ -696,7 +752,7 @@ async def transferCommand(message, name: str = commands.parameter(description="N
             "denyMessage": 'Transfer denied. Message bank staff for more details. The most likely reason is that you transferred past your max transfer amount. Sometimes we will allow this, but that is the exception not the rule. Sorry for the inconvenience!'
         })
         
-        await message.reply("Pending...")
+        await message.reply("Awaiting approval because you have surpassed your account's daily limit...")
 
 @transferCommand.error
 async def transfer_error(ctx, error):
@@ -745,7 +801,7 @@ async def accountEdit(message, name: str = commands.parameter(description="Name 
     WHERE name = '{name}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []: 
         await message.reply("Account not found")
         return
@@ -766,7 +822,7 @@ async def accountEdit(message, name: str = commands.parameter(description="Name 
         "denyMessage": 'Update Denied.'
     })
     
-    await message.reply("Pending...")
+    await message.reply("Awaiting Approval...")
 
 @accountEdit.error
 async def accountEdit_error(ctx, error):
@@ -789,7 +845,7 @@ async def creditScoreIncrease(message, name: str = commands.parameter(descriptio
     WHERE name = '{name}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []: 
         await message.reply("Account not found")
         return
@@ -841,7 +897,7 @@ async def creditScoreIncrease(message, name: str = commands.parameter(descriptio
         "denyMessage": 'Update Denied.'
     })
     
-    await message.reply("Pending...")
+    await message.reply("Awaiting Approval...")
 
 @creditScoreIncrease.error
 async def creditScoreIncrease_error(ctx, error):
@@ -862,7 +918,7 @@ async def creditScoreDecrease(message, name: str = commands.parameter(descriptio
     WHERE name = '{name}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []: 
         await message.reply("Account not found")
         return
@@ -914,7 +970,7 @@ async def creditScoreDecrease(message, name: str = commands.parameter(descriptio
         "denyMessage": 'Update Denied.'
     })
     
-    await message.reply("Pending...")
+    await message.reply("Awaiting Approval...")
 
 @creditScoreDecrease.error
 async def creditScoreDecrease_error(ctx, error):
@@ -928,6 +984,7 @@ async def creditScoreDecrease_error(ctx, error):
 
 #region Gambling
 
+'''
 #region Dice Roll Command
 @bot.command(name='dice', description='gamble on a dice roll')
 async def diceRoll(message, name: str = commands.parameter(description="Name of account"), password: str = commands.parameter(description="Password of account"), guess: str = commands.parameter(description="Which number you would like to bet on"), betAmount: str = commands.parameter(description="How much you would like to bet")):
@@ -965,14 +1022,11 @@ async def diceRoll(message, name: str = commands.parameter(description="Name of 
     money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = '{name}' AND password = '{password}'")
     money = float(str(money).replace("[(","").replace(",)]",""))
     
-    print(str(money))
-    
     if money < betAmount:
         await message.reply("You lack the funds for that transaction.")
         return
     
     roll = random.randint(1,6)
-    print(str(roll))
     
     channel = await bot.fetch_channel(logID)
     
@@ -998,6 +1052,7 @@ async def diceRoll_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("All arguments not provided, try running the help command")
 #endregion
+'''
 
 #region Lottery
 
@@ -1103,7 +1158,7 @@ async def endLottery(message):
         "denyMessage": 'Lottery roll denied'
     })
     
-    await message.reply("Pending...")
+    await message.reply("Awaiting Approval...")
 
 @endLottery.error
 async def endLottery_error(ctx, error):
@@ -1217,7 +1272,7 @@ async def loanApply(message,
         "denyMessage": 'Loan denied. Message bank staff for more details. Sorry for the inconvenience!'
     })
     
-    await message.reply("Awaiting approval")
+    await message.reply("Awaiting Approval...")
 
 @loanApply.error
 async def loanApply_error(ctx, error):
@@ -1345,7 +1400,7 @@ async def loanDelete(message,
     WHERE id = {id}
     """
     check = execute_read_query(connection, checkLoan)
-    print(str(check))
+    
     if check == []:
         await message.reply("Unable to find loan.")
         return
@@ -1370,7 +1425,7 @@ async def loanDelete(message,
         "denyMessage": 'Loan deletion denied. Message bank staff for more details. Sorry for the inconvenience!'
     })
     
-    await message.reply(f'Pending...')
+    await message.reply(f'Awaiting Approval...')
 
 @loanDelete.error
 async def loanDelete_error(ctx, error):
@@ -1406,7 +1461,7 @@ async def payLoan(message,
     WHERE name = '{name}' AND password = '{password}'
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []:
         await message.reply("Incorrect name or password. If you believe that you have the correct name and password, contact bank staff.")
         return
@@ -1417,7 +1472,7 @@ async def payLoan(message,
     WHERE id = {id} AND accountName = '{name}'
     """
     check = execute_read_query(connection, checkLoan)
-    print(str(check))
+    
     if check == []:
         await message.reply("Unable to find loan or loan is not on this account")
         return
@@ -1469,7 +1524,7 @@ async def payLoan_error(ctx, error):
 
 #region Loan Edit Command
 @bot.command(name='loanEdit', description='Edits loan data')
-async def accountEdit(message, 
+async def loanEdit(message, 
                       id: str = commands.parameter(description="ID of loan"), 
                       dataToChange: str = commands.parameter(description="Name of data you want to change"), 
                       newData: str = commands.parameter(description="Data to change it to")):
@@ -1484,7 +1539,7 @@ async def accountEdit(message,
     WHERE id = {id}
     """
     check = execute_read_query(connection, checkLogin)
-    print(str(check))
+    
     if check == []: 
         await message.reply("Loan not found")
         return
@@ -1505,10 +1560,10 @@ async def accountEdit(message,
         "denyMessage": 'Update Denied.'
     })
     
-    await message.reply("Pending...")
+    await message.reply("Awaiting Approval...")
 
-@accountEdit.error
-async def accountEdit_error(ctx, error):
+@loanEdit.error
+async def loanEdit_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("All arguments not provided, try running the help command")
 #endregion
@@ -1585,7 +1640,6 @@ async def biWeeklyUpdate(message):
     
     for i in accounts:
         name = str(i).replace("(","").replace(",)","")
-        print(name)
                 
         money = execute_read_query(connection, f"SELECT money FROM accounts WHERE name = {name}")
         money = float(str(money).replace("[(","").replace(",)]",""))
@@ -1664,6 +1718,9 @@ async def on_ready():
         execute_query(connection, create_account)
         
     #endregion
+    
+    activity = discord.Game(name="Banking on Cinder")
+    await bot.change_presence(status=discord.Status.online, activity=activity)
     
     await start_daily_cycle()
 
